@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Emby.MeiamSub.Thunder", "Em
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Emby.MeiamSub.DevTool", "Emby.MeiamSub.DevTool\Emby.MeiamSub.DevTool.csproj", "{6B0C23EA-EC24-4FB0-948E-094E84AEBF21}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Emby.MeiamSub.Shooter", "Emby.MeiamSub.Shooter\Emby.MeiamSub.Shooter.csproj", "{0F502AEB-0FF4-44FA-8391-13AD61FC5490}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{6B0C23EA-EC24-4FB0-948E-094E84AEBF21}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6B0C23EA-EC24-4FB0-948E-094E84AEBF21}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6B0C23EA-EC24-4FB0-948E-094E84AEBF21}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0F502AEB-0FF4-44FA-8391-13AD61FC5490}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0F502AEB-0FF4-44FA-8391-13AD61FC5490}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0F502AEB-0FF4-44FA-8391-13AD61FC5490}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0F502AEB-0FF4-44FA-8391-13AD61FC5490}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

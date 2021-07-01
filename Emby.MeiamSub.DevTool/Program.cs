@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace Emby.Subtitle.DevTool
 {
@@ -8,11 +9,12 @@ namespace Emby.Subtitle.DevTool
     {
         static void Main(string[] args)
         {
-            Console.WriteLine(getCid($"X:\\Download\\冰路营救 (2021)\\冰路营救 (2021) 1080p AC3.mkv"));
+            //Console.WriteLine(ComputeFileHash($"X:\\Download\\喋血战士 (2020)\\喋血战士 (2020) 1080p AAC.mp4"));
+            Console.WriteLine(ComputeFileHash($"D:\\Documents\\Downloads\\testidx.avi"));
             Console.ReadKey();
         }
 
-        private static string getCid(string filePath)
+        private static string GetCid(string filePath)
         {
             var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
             var reader = new BinaryReader(stream);
@@ -37,9 +39,57 @@ namespace Emby.Subtitle.DevTool
             var result = "";
             foreach (var i in buffer)
             {
-                result += String.Format("{0:X2}", i);
+                result += string.Format("{0:X2}", i);
             }
             return result;
+        }
+
+        public static string ComputeFileHash(string filePath)
+        {
+            FileInfo fileInfo = new FileInfo(filePath);
+
+            string ret = "";
+
+            if (!fileInfo.Exists || fileInfo.Length < 8 * 1024)
+            {
+                return ret;
+            }
+
+            FileStream fs = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read);
+
+            long[] offset = new long[4];
+            offset[3] = fileInfo.Length - 8 * 1024;
+            offset[2] = fileInfo.Length / 3;
+            offset[1] = fileInfo.Length / 3 * 2;
+            offset[0] = 4 * 1024;
+
+            byte[] bBuf = new byte[1024 * 4];
+
+            for (int i = 0; i < 4; ++i)
+            {
+                fs.Seek(offset[i], 0);
+                fs.Read(bBuf, 0, 4 * 1024);
+
+                MD5 md5Hash = MD5.Create();
+                byte[] data = md5Hash.ComputeHash(bBuf);
+                StringBuilder sBuilder = new StringBuilder();
+
+                for (int j = 0; j < data.Length; j++)
+                {
+                    sBuilder.Append(data[j].ToString("x2"));
+                }
+
+                if (!string.IsNullOrEmpty(ret))
+                {
+                    ret += ";";
+                }
+
+                ret += sBuilder.ToString();
+            }
+
+            fs.Close();
+
+            return ret;
         }
     }
 }

@@ -1,26 +1,23 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyVersion>1.0.1.0</AssemblyVersion>
     <FileVersion>1.0.1.0</FileVersion>
     <Version>1.0.1</Version>
   </PropertyGroup>
-  
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
-
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <WarningLevel>2</WarningLevel>
+  </PropertyGroup>
   <ItemGroup>
     <None Remove="Thumb.png" />
   </ItemGroup>
-
   <ItemGroup>
     <EmbeddedResource Include="Thumb.png" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="MediaBrowser.Common" Version="4.6.0.50" />
     <PackageReference Include="MediaBrowser.Server.Core" Version="4.6.0.50" />
   </ItemGroup>
-
 </Project>

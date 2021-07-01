@@ -3,7 +3,7 @@ using MediaBrowser.Model.Drawing;
 using System;
 using System.IO;
 
-namespace Emby.MeiamSub.Thunder
+namespace Emby.MeiamSub.Shooter
 {
 
     /// <summary>
@@ -14,17 +14,17 @@ namespace Emby.MeiamSub.Thunder
         /// <summary>
         /// 插件ID
         /// </summary>
-        public override Guid Id => new Guid("E4CE9DA9-EF00-417C-96F2-861C512D45EB");
+        public override Guid Id => new Guid("038D37A2-7A1E-4C01-9B6D-AA215D29AB4C");
 
         /// <summary>
         /// 插件名称
         /// </summary>
-        public override string Name => "MeiamSub.Thunder";
+        public override string Name => "MeiamSub.Shooter";
 
         /// <summary>
         /// 插件描述
         /// </summary>
-        public override string Description => "Download subtitles from Thunder XMP";
+        public override string Description => "Download subtitles from Shooter";
 
         /// <summary>
         /// 缩略图格式化类型

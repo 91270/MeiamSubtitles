@@ -1,4 +1,4 @@
-﻿using Emby.MeiamSub.Thunder.Model;
+﻿using Emby.MeiamSub.Shooter.Model;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Subtitles;
@@ -16,12 +16,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 
-namespace Emby.MeiamSub.Thunder
+namespace Emby.MeiamSub.Shooter
 {
     /// <summary>
     /// 迅雷字幕组件
     /// </summary>
-    public class ThunderProvider : ISubtitleProvider, IHasOrder
+    public class ShooterProvider : ISubtitleProvider, IHasOrder
     {
         #region 变量声明
         public const string ASS = "ass";
@@ -33,7 +33,7 @@ namespace Emby.MeiamSub.Thunder
         private readonly IHttpClient _httpClient;
 
         public int Order => 0;
-        public string Name => "MeiamSub.Thunder";
+        public string Name => "MeiamSub.Shooter";
 
         /// <summary>
         /// 支持电影、剧集
@@ -42,7 +42,7 @@ namespace Emby.MeiamSub.Thunder
         #endregion
 
         #region 构造函数
-        public ThunderProvider(ILogger logger, IJsonSerializer jsonSerializer,IHttpClient httpClient)
+        public ShooterProvider(ILogger logger, IJsonSerializer jsonSerializer,IHttpClient httpClient)
         {
             _logger = logger;
             _jsonSerializer = jsonSerializer;
@@ -60,7 +60,7 @@ namespace Emby.MeiamSub.Thunder
         /// <returns></returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
-            _logger.Debug($"MeiamSub.Thunder Search | Request -> { _jsonSerializer.SerializeToString(request) }");
+            _logger.Debug($"MeiamSub.Shooter Search | Request -> { _jsonSerializer.SerializeToString(request) }");
 
             var subtitles = await SearchSubtitlesAsync(request);
 
@@ -74,56 +74,76 @@ namespace Emby.MeiamSub.Thunder
         /// <returns></returns>
         private async Task<IEnumerable<RemoteSubtitleInfo>> SearchSubtitlesAsync(SubtitleSearchRequest request)
         {
-            if (request.Language != "chi")
+            if (request.Language != "chi" && request.Language != "eng")
             {
                 return Array.Empty<RemoteSubtitleInfo>();
             }
 
-            var cid = GetCidByFile(request.MediaPath);
+            FileInfo fileInfo = new FileInfo(request.MediaPath);
 
-            var response = await _httpClient.GetResponse(new HttpRequestOptions
+            var hash = ComputeFileHash(fileInfo);
+
+            HttpRequestOptions options = new HttpRequestOptions
             {
-                Url = $"http://sub.xmp.sandai.net:8000/subxl/{cid}.json"
+                Url = $"http://shooter.cn/api/subapi.php",
+                UserAgent = "Emby.MeiamSub.Shooter",
+                AcceptHeader = "*/*",
+            };
+
+            options.SetPostData(new Dictionary<string, string>
+            {
+                { "filehash", HttpUtility.UrlEncode(hash)},
+                { "pathinfo", HttpUtility.UrlEncode(request.MediaPath)},
+                { "format", "json"},
+                { "lang",request.Language ==  "chi" ? "chn" : "eng"}
             });
 
-            _logger.Debug($"MeiamSub.Thunder Search | Response -> { _jsonSerializer.SerializeToString(response) }");
+            _logger.Debug($"MeiamSub.Shooter Search | Request -> { _jsonSerializer.SerializeToString(options) }");
+
+            var response = await _httpClient.Post(options);
+
+            _logger.Debug($"MeiamSub.Shooter Search | Response -> { _jsonSerializer.SerializeToString(response) }");
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                var subtitleResponse = _jsonSerializer.DeserializeFromStream<SubtitleResponseRoot>(response.Content);
+                var subtitleResponse = _jsonSerializer.DeserializeFromStream<List<SubtitleResponseRoot>>(response.Content);
 
                 if (subtitleResponse != null)
                 {
-                    _logger.Debug($"MeiamSub.Thunder Search | Response -> { _jsonSerializer.SerializeToString(subtitleResponse) }");
+                    _logger.Debug($"MeiamSub.Shooter Search | Response -> { _jsonSerializer.SerializeToString(subtitleResponse) }");
 
-                    var subtitles = subtitleResponse.sublist.Where(m => !string.IsNullOrEmpty(m.sname));
+                    var remoteSubtitleInfos = new List<RemoteSubtitleInfo>();
 
-                    if (subtitles.Count() > 0)
+                    foreach(var subFileInfo in subtitleResponse)
                     {
-                        _logger.Debug($"MeiamSub.Thunder Search | Summary -> Get  { subtitles.Count() }  Subtitles");
-
-                        return subtitles.Select(m => new RemoteSubtitleInfo()
+                        foreach(var subFile in subFileInfo.Files)
                         {
-                            Id = Base64Encode(_jsonSerializer.SerializeToString(new DownloadSubInfo
+                            remoteSubtitleInfos.Add(new RemoteSubtitleInfo()
                             {
-                                Url = m.surl,
-                                Format = ExtractFormat(m.sname),
-                                Language = request.Language,
-                                TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
-                                IsForced = request.IsForced
-                            })),
-                            Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.TwoLetterISOLanguageName} | 迅雷",
-                            Author = "Meiam ",
-                            CommunityRating = Convert.ToSingle(m.rate),
-                            ProviderName = "MeiamSub.Thunder",
-                            Format = ExtractFormat(m.sname),
-                            Comment = $"Format : { ExtractFormat(m.sname)}  -  Rate : { m.rate }"
-                        }).OrderByDescending(m => m.CommunityRating);
+                                Id = Base64Encode(_jsonSerializer.SerializeToString(new DownloadSubInfo
+                                {
+                                    Url = subFile.Link,
+                                    Format = subFile.Ext,
+                                    Language = request.Language,
+                                    TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
+                                    IsForced = request.IsForced
+                                })),
+                                Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.TwoLetterISOLanguageName} | 射手",
+                                Author = "Meiam ",
+                                ProviderName = "MeiamSub.Shooter",
+                                Format = subFile.Ext,
+                                Comment = $"Format : { ExtractFormat(subFile.Ext)}"
+                            });
+                        }
                     }
+
+                    _logger.Debug($"MeiamSub.Shooter Search | Summary -> Get  { remoteSubtitleInfos.Count }  Subtitles");
+
+                    return remoteSubtitleInfos;
                 }
             }
 
-            _logger.Debug($"MeiamSub.Thunder Search | Summary -> Get  0  Subtitles");
+            _logger.Debug($"MeiamSub.Shooter Search | Summary -> Get  0  Subtitles");
 
             return Array.Empty<RemoteSubtitleInfo>();
         }
@@ -140,7 +160,7 @@ namespace Emby.MeiamSub.Thunder
         {
             await Task.Run(() =>
             {
-                _logger.Debug($"MeiamSub.Thunder DownloadSub | Request -> {id}");
+                _logger.Debug($"MeiamSub.Shooter DownloadSub | Request -> {id}");
             });
 
             return await DownloadSubAsync(id);
@@ -155,14 +175,14 @@ namespace Emby.MeiamSub.Thunder
         {
             var downloadSub = _jsonSerializer.DeserializeFromString<DownloadSubInfo>(Base64Decode(info));
 
-            _logger.Debug($"MeiamSub.Thunder DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
+            _logger.Debug($"MeiamSub.Shooter DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
 
             var response = await _httpClient.GetResponse(new HttpRequestOptions
             {
                 Url = downloadSub.Url
             });
 
-            _logger.Debug($"MeiamSub.Thunder DownloadSub | Response -> { response.StatusCode }");
+            _logger.Debug($"MeiamSub.Shooter DownloadSub | Response -> { response.StatusCode }");
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
@@ -226,38 +246,54 @@ namespace Emby.MeiamSub.Thunder
         }
 
         /// <summary>
-        /// 获取文件 CID (迅雷)
+        /// 获取文件 Hash (射手)
         /// </summary>
         /// <param name="filePath"></param>
         /// <returns></returns>
-        private string GetCidByFile(string filePath)
+        public static string ComputeFileHash(FileInfo fileInfo)
         {
-            var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-            var reader = new BinaryReader(stream);
-            var fileSize = new FileInfo(filePath).Length;
-            var SHA1 = new SHA1CryptoServiceProvider();
-            var buffer = new byte[0xf000];
-            if (fileSize < 0xf000)
-            {
-                reader.Read(buffer, 0, (int)fileSize);
-                buffer = SHA1.ComputeHash(buffer, 0, (int)fileSize);
-            }
-            else
-            {
-                reader.Read(buffer, 0, 0x5000);
-                stream.Seek(fileSize / 3, SeekOrigin.Begin);
-                reader.Read(buffer, 0x5000, 0x5000);
-                stream.Seek(fileSize - 0x5000, SeekOrigin.Begin);
-                reader.Read(buffer, 0xa000, 0x5000);
+            string ret = "";
 
-                buffer = SHA1.ComputeHash(buffer, 0, 0xf000);
-            }
-            var result = "";
-            foreach (var i in buffer)
+            if (!fileInfo.Exists || fileInfo.Length < 8 * 1024)
             {
-                result += string.Format("{0:X2}", i);
+                return ret;
             }
-            return result;
+
+            FileStream fs = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read);
+
+            long[] offset = new long[4];
+            offset[3] = fileInfo.Length - 8 * 1024;
+            offset[2] = fileInfo.Length / 3;
+            offset[1] = fileInfo.Length / 3 * 2;
+            offset[0] = 4 * 1024;
+
+            byte[] bBuf = new byte[1024 * 4];
+
+            for (int i = 0; i < 4; ++i)
+            {
+                fs.Seek(offset[i], 0);
+                fs.Read(bBuf, 0, 4 * 1024);
+
+                MD5 md5Hash = MD5.Create();
+                byte[] data = md5Hash.ComputeHash(bBuf);
+                StringBuilder sBuilder = new StringBuilder();
+
+                for (int j = 0; j < data.Length; j++)
+                {
+                    sBuilder.Append(data[j].ToString("x2"));
+                }
+
+                if (!string.IsNullOrEmpty(ret))
+                {
+                    ret += ";";
+                }
+
+                ret += sBuilder.ToString();
+            }
+
+            fs.Close();
+
+            return ret;
         }
         #endregion
     }
