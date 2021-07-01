@@ -18,8 +18,12 @@ using System.Web;
 
 namespace Emby.MeiamSub.Thunder
 {
+    /// <summary>
+    /// 迅雷字幕组件
+    /// </summary>
     public class ThunderProvider : ISubtitleProvider, IHasOrder
     {
+        #region 变量声明
         public const string ASS = "ass";
         public const string SSA = "ssa";
         public const string SRT = "srt";
@@ -28,18 +32,32 @@ namespace Emby.MeiamSub.Thunder
         private readonly IJsonSerializer _jsonSerializer;
         private readonly IHttpClient _httpClient;
 
-        public int Order => 1;
+        public int Order => 0;
         public string Name => "ThunderSubtitle";
 
+        /// <summary>
+        /// 支持电影、剧集
+        /// </summary>
         public IEnumerable<VideoContentType> SupportedMediaTypes => new List<VideoContentType>() { VideoContentType.Movie, VideoContentType.Episode };
+        #endregion
 
+        #region 构造函数
         public ThunderProvider(ILogger logger, IJsonSerializer jsonSerializer,IHttpClient httpClient)
         {
             _logger = logger;
             _jsonSerializer = jsonSerializer;
             _httpClient = httpClient;
         }
+        #endregion
 
+        #region 查询字幕
+
+        /// <summary>
+        /// 查询请求
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
             _logger.Debug($"ThunderSubtitle Search | Request -> { _jsonSerializer.SerializeToString(request) }");
@@ -49,7 +67,11 @@ namespace Emby.MeiamSub.Thunder
             return subtitles;
         }
 
-
+        /// <summary>
+        /// 查询字幕
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
         private async Task<IEnumerable<RemoteSubtitleInfo>> SearchSubtitlesAsync(SubtitleSearchRequest request)
         {
             var cid = GetCidByFile(request.MediaPath);
@@ -94,7 +116,16 @@ namespace Emby.MeiamSub.Thunder
 
             return Array.Empty<RemoteSubtitleInfo>();
         }
+        #endregion
 
+
+        #region 下载字幕
+        /// <summary>
+        /// 下载请求
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         public async Task<SubtitleResponse> GetSubtitles(string id, CancellationToken cancellationToken)
         {
             await Task.Run(() =>
@@ -105,6 +136,11 @@ namespace Emby.MeiamSub.Thunder
             return await DownloadSubAsync(id);
         }
 
+        /// <summary>
+        /// 下载字幕
+        /// </summary>
+        /// <param name="info"></param>
+        /// <returns></returns>
         private async Task<SubtitleResponse> DownloadSubAsync(string info)
         {
             var downloadSub = _jsonSerializer.DeserializeFromString<DownloadSubInfo>(Base64Decode(info));
@@ -133,7 +169,36 @@ namespace Emby.MeiamSub.Thunder
             return new SubtitleResponse();
 
         }
+        #endregion
 
+        #region 内部方法
+
+        /// <summary>
+        /// Base64 加密
+        /// </summary>
+        /// <param name="plainText">明文</param>
+        /// <returns></returns>
+        public static string Base64Encode(string plainText)
+        {
+            var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
+            return Convert.ToBase64String(plainTextBytes);
+        }
+        /// <summary>
+        /// Base64 解密
+        /// </summary>
+        /// <param name="base64EncodedData"></param>
+        /// <returns></returns>
+        public static string Base64Decode(string base64EncodedData)
+        {
+            var base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
+            return Encoding.UTF8.GetString(base64EncodedBytes);
+        }
+
+        /// <summary>
+        /// 提取格式化字幕类型
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
         protected string ExtractFormat(string text)
         {
 
@@ -150,19 +215,11 @@ namespace Emby.MeiamSub.Thunder
             return result;
         }
 
-        public static string Base64Encode(string plainText)
-        {
-            var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
-            return Convert.ToBase64String(plainTextBytes);
-        }
-
-        public static string Base64Decode(string base64EncodedData)
-        {
-            var base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
-            return Encoding.UTF8.GetString(base64EncodedBytes);
-        }
-
-
+        /// <summary>
+        /// 获取文件 CID (迅雷)
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
         private string GetCidByFile(string filePath)
         {
             var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
@@ -192,5 +249,6 @@ namespace Emby.MeiamSub.Thunder
             }
             return result;
         }
+        #endregion
     }
 }
