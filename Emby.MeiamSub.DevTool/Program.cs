@@ -9,8 +9,8 @@ namespace Emby.Subtitle.DevTool
     {
         static void Main(string[] args)
         {
-            //Console.WriteLine(ComputeFileHash($"X:\\Download\\喋血战士 (2020)\\喋血战士 (2020) 1080p AAC.mp4"));
-            Console.WriteLine(ComputeFileHash($"D:\\Documents\\Downloads\\testidx.avi"));
+            Console.WriteLine(ComputeFileHash($"X:\\Favorites\\Movie\\八佰 (2020)\\八佰 (2020) 1080p TrueHD.mkv"));
+            //Console.WriteLine(ComputeFileHash($"D:\\Documents\\Downloads\\testidx.avi"));
             Console.ReadKey();
         }
 

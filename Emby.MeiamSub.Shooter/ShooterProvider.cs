@@ -104,7 +104,7 @@ namespace Emby.MeiamSub.Shooter
 
             _logger.Debug($"MeiamSub.Shooter Search | Response -> { _jsonSerializer.SerializeToString(response) }");
 
-            if (response.StatusCode == HttpStatusCode.OK)
+            if (response.StatusCode == HttpStatusCode.OK && response.ContentType.Contains("application/json"))
             {
                 var subtitleResponse = _jsonSerializer.DeserializeFromStream<List<SubtitleResponseRoot>>(response.Content);
 
