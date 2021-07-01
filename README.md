@@ -5,8 +5,8 @@ Emby 中文字幕插件 ，支持 迅雷影音、射手网、 精准匹配，自
 [![.NET CORE](https://img.shields.io/badge/.NET%20Core-3.1-d.svg)](#)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Win%20%7C%20OSX-brightgreen.svg)](#)
 [![LICENSE](https://img.shields.io/badge/license-Apache%202-blue)](#)
-[![Star](https://img.shields.io/github/stars/91270/Meiam.System?label=Star%20this%20repo)](https://github.com/91270/Emby.MeiamSub)
-[![Fork](https://img.shields.io/github/forks/91270/Meiam.System?label=Fork%20this%20repo)](https://github.com/91270/Emby.MeiamSub/fork)
+[![Star](https://img.shields.io/github/stars/91270/Emby.MeiamSub?label=Star%20this%20repo)](https://github.com/91270/Emby.MeiamSub)
+[![Fork](https://img.shields.io/github/forks/91270/Emby.MeiamSub?label=Fork%20this%20repo)](https://github.com/91270/Emby.MeiamSub/fork)
 [![博客](https://img.shields.io/badge/博客-Meiam's%20Home-brightgreen.svg)](https://www.592.la/)
 
 
