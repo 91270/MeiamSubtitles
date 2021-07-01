@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31424.327
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Emby.MeiamSub.Thunder", "Emby.MeiamSub.Thunder\Emby.MeiamSub.Thunder.csproj", "{96F3F427-0EC3-4610-81C3-2C92D773EDC8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Emby.MeiamSub.DevTool", "Emby.MeiamSub.DevTool\Emby.MeiamSub.DevTool.csproj", "{6B0C23EA-EC24-4FB0-948E-094E84AEBF21}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{96F3F427-0EC3-4610-81C3-2C92D773EDC8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96F3F427-0EC3-4610-81C3-2C92D773EDC8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96F3F427-0EC3-4610-81C3-2C92D773EDC8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96F3F427-0EC3-4610-81C3-2C92D773EDC8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B0C23EA-EC24-4FB0-948E-094E84AEBF21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B0C23EA-EC24-4FB0-948E-094E84AEBF21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B0C23EA-EC24-4FB0-948E-094E84AEBF21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B0C23EA-EC24-4FB0-948E-094E84AEBF21}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AC5A2964-C7C8-419B-A8DD-63424233E6AA}
+	EndGlobalSection
+EndGlobal
