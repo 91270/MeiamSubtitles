@@ -85,8 +85,9 @@ namespace Emby.MeiamSub.Shooter
 
             HttpRequestOptions options = new HttpRequestOptions
             {
-                Url = $"http://shooter.cn/api/subapi.php",
+                Url = $"http://www.shooter.cn/api/subapi.php",
                 UserAgent = "Emby.MeiamSub.Shooter",
+                TimeoutMs = 30000,
                 AcceptHeader = "*/*",
             };
 
@@ -179,7 +180,10 @@ namespace Emby.MeiamSub.Shooter
 
             var response = await _httpClient.GetResponse(new HttpRequestOptions
             {
-                Url = downloadSub.Url
+                Url = downloadSub.Url,
+                UserAgent = "Emby.MeiamSub.Shooter",
+                TimeoutMs = 30000,
+                AcceptHeader = "*/*",
             });
 
             _logger.Debug($"MeiamSub.Shooter DownloadSub | Response -> { response.StatusCode }");

@@ -83,7 +83,10 @@ namespace Emby.MeiamSub.Thunder
 
             var response = await _httpClient.GetResponse(new HttpRequestOptions
             {
-                Url = $"http://sub.xmp.sandai.net:8000/subxl/{cid}.json"
+                Url = $"http://sub.xmp.sandai.net:8000/subxl/{cid}.json",
+                UserAgent = "Emby.MeiamSub.Thunder",
+                TimeoutMs = 30000,
+                AcceptHeader = "*/*",
             });
 
             _logger.Debug($"MeiamSub.Thunder Search | Response -> { _jsonSerializer.SerializeToString(response) }");
@@ -159,7 +162,10 @@ namespace Emby.MeiamSub.Thunder
 
             var response = await _httpClient.GetResponse(new HttpRequestOptions
             {
-                Url = downloadSub.Url
+                Url = downloadSub.Url,
+                UserAgent = "Emby.MeiamSub.Thunder",
+                TimeoutMs = 30000,
+                AcceptHeader = "*/*",
             });
 
             _logger.Debug($"MeiamSub.Thunder DownloadSub | Response -> { response.StatusCode }");
