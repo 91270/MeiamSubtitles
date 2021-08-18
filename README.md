@@ -40,6 +40,8 @@ Emby 中文字幕插件 ，支持 迅雷影音、射手网、 精准匹配，自
 
 ## 使用插件
 
+首先下载已编译好的插件 [LINK](https://github.com/91270/Emby.MeiamSub/releases)
+
 ### WINDOWS
 ```bash
 复制插件文件到   Emby-Server\Programdata\Plugins\
