@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyVersion>1.0.2.0</AssemblyVersion>
-    <FileVersion>1.0.2.0</FileVersion>
-    <Version>1.0.2</Version>
+    <AssemblyVersion>1.0.4.0</AssemblyVersion>
+    <FileVersion>1.0.4.0</FileVersion>
+    <Version>1.0.4</Version>
   </PropertyGroup>
   
   <PropertyGroup>
@@ -23,8 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MediaBrowser.Common" Version="4.6.0.50" />
-    <PackageReference Include="MediaBrowser.Server.Core" Version="4.6.0.50" />
+    <PackageReference Include="MediaBrowser.Common" Version="4.4.2" />
+    <PackageReference Include="MediaBrowser.Server.Core" Version="4.4.2" />
   </ItemGroup>
 
 </Project>
