@@ -176,6 +176,8 @@ namespace Emby.MeiamSub.Shooter
         {
             var downloadSub = _jsonSerializer.DeserializeFromString<DownloadSubInfo>(Base64Decode(info));
 
+            downloadSub.Url = downloadSub.Url.Replace("https://www.shooter.cn", "http://www.shooter.cn");
+
             _logger.Debug($"MeiamSub.Shooter DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
 
             var response = await _httpClient.GetResponse(new HttpRequestOptions
@@ -185,6 +187,7 @@ namespace Emby.MeiamSub.Shooter
                 TimeoutMs = 30000,
                 AcceptHeader = "*/*",
             });
+
 
             _logger.Debug($"MeiamSub.Shooter DownloadSub | Response -> { response.StatusCode }");
 
