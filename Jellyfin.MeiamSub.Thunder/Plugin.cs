@@ -28,9 +28,6 @@ namespace Jellyfin.MeiamSub.Thunder
         public override string Description => "Download subtitles from Thunder XMP";
 
 
-        p
-
-
         public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
             : base(applicationPaths, xmlSerializer)
         {
