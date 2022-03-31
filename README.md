@@ -1,4 +1,4 @@
-# Emby.MeiamSub
+# MeiamSubtitles
 Emby Jellyfin 中文字幕插件 ，支持 迅雷影音、射手网、 精准匹配，自动下载
 
 
