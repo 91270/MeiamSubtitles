@@ -2,7 +2,6 @@
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Subtitles;
 using MediaBrowser.Model.Providers;
-using MediaBrowser.Model.Serialization;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -11,12 +10,11 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 
 namespace Jellyfin.MeiamSub.Shooter
 {
@@ -31,8 +29,7 @@ namespace Jellyfin.MeiamSub.Shooter
         public const string SRT = "srt";
 
         private readonly ILogger<ShooterProvider> _logger;
-        private readonly IJsonSerializer _jsonSerializer;
-        private static readonly HttpClient Client = new HttpClient();
+        private static readonly HttpClient _httpClient = new HttpClient();
 
         public int Order => 0;
         public string Name => "MeiamSub.Shooter";
@@ -44,10 +41,11 @@ namespace Jellyfin.MeiamSub.Shooter
         #endregion
 
         #region 构造函数
-        public ShooterProvider(ILogger<ShooterProvider> logger, IJsonSerializer jsonSerializer)
+        public ShooterProvider(ILogger<ShooterProvider> logger)
         {
             _logger = logger;
-            _jsonSerializer = jsonSerializer;
+            _httpClient.Timeout = TimeSpan.FromSeconds(30);
+            _logger.LogDebug("MeiamSub.Shooter Init");
         }
         #endregion
 
@@ -61,7 +59,7 @@ namespace Jellyfin.MeiamSub.Shooter
         /// <returns></returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation($"MeiamSub.Shooter Search | Request -> { _jsonSerializer.SerializeToString(request) }");
+            _logger.LogDebug($"MeiamSub.Shooter Search | Request -> { JsonSerializer.Serialize(request) }");
 
             var subtitles = await SearchSubtitlesAsync(request);
 
@@ -84,63 +82,74 @@ namespace Jellyfin.MeiamSub.Shooter
 
             var hash = ComputeFileHash(fileInfo);
 
-            using (var _httpClient = new HttpClient())
+            HttpContent content = new FormUrlEncodedContent(new[]
             {
-                var options = new {
+                new KeyValuePair<string, string>("filehash", hash),
+                new KeyValuePair<string, string>("pathinfo", request.MediaPath),
+                new KeyValuePair<string, string>("format", "json"),
+                new KeyValuePair<string, string>("lang", request.Language == "chi" ? "chn" : "eng"),
+            });
 
-                    filehash = HttpUtility.UrlEncode(hash),
-                    pathinfo = HttpUtility.UrlEncode(request.MediaPath),
-                    format = "json",
-                    lang = request.Language == "chi" ? "chn" : "eng"
-                };
-
-                _logger.LogInformation($"MeiamSub.Shooter Search | Request -> { _jsonSerializer.SerializeToString(options) }");
-
-                var response = await PostAsync($"http://www.shooter.cn/api/subapi.php", options);
-
-                _logger.LogInformation($"MeiamSub.Shooter Search | Response -> { _jsonSerializer.SerializeToString(response) }");
-
-                if (response.StatusCode == HttpStatusCode.OK && response.Headers.Any(m => m.Value.Contains("application/json")))
+            using var options = new HttpRequestMessage
+            {
+                Method = HttpMethod.Post,
+                RequestUri = new Uri("http://www.shooter.cn/api/subapi.php"),
+                Content = content,
+                Headers =
                 {
-                    var subtitleResponse = _jsonSerializer.DeserializeFromStream<List<SubtitleResponseRoot>>(await response.Content.ReadAsStreamAsync());
-
-                    if (subtitleResponse != null)
-                    {
-                        _logger.LogInformation($"MeiamSub.Shooter Search | Response -> { _jsonSerializer.SerializeToString(subtitleResponse) }");
-
-                        var remoteSubtitleInfos = new List<RemoteSubtitleInfo>();
-
-                        foreach (var subFileInfo in subtitleResponse)
-                        {
-                            foreach (var subFile in subFileInfo.Files)
-                            {
-                                remoteSubtitleInfos.Add(new RemoteSubtitleInfo()
-                                {
-                                    Id = Base64Encode(_jsonSerializer.SerializeToString(new DownloadSubInfo
-                                    {
-                                        Url = subFile.Link,
-                                        Format = subFile.Ext,
-                                        Language = request.Language,
-                                        TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
-                                    })),
-                                    Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.TwoLetterISOLanguageName} | 射手",
-                                    Author = "Meiam ",
-                                    ProviderName = "MeiamSub.Shooter",
-                                    Format = subFile.Ext,
-                                    Comment = $"Format : { ExtractFormat(subFile.Ext)}"
-                                });
-                            }
-                        }
-
-                        _logger.LogInformation($"MeiamSub.Shooter Search | Summary -> Get  { remoteSubtitleInfos.Count }  Subtitles");
-
-                        return remoteSubtitleInfos;
-                    }
+                    UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue("Jellyfin.MeiamSub.Shooter")) },
+                    Accept = { new MediaTypeWithQualityHeaderValue("*/*") }
                 }
+            };
 
-                _logger.LogInformation($"MeiamSub.Shooter Search | Summary -> Get  0  Subtitles");
+            _logger.LogDebug($"MeiamSub.Shooter Search | Request -> { JsonSerializer.Serialize(options) }");
 
+
+            var response = await _httpClient.SendAsync(options).ConfigureAwait(false);
+
+
+            _logger.LogDebug($"MeiamSub.Shooter Search | Response -> { JsonSerializer.Serialize(response) }");
+
+            if (response.StatusCode == HttpStatusCode.OK && response.Headers.Any(m => m.Value.Contains("application/json")))
+            {
+                var subtitleResponse = JsonSerializer.Deserialize<List<SubtitleResponseRoot>>(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+
+                if (subtitleResponse != null)
+                {
+                    _logger.LogDebug($"MeiamSub.Shooter Search | Response -> { JsonSerializer.Serialize(subtitleResponse) }");
+
+                    var remoteSubtitleInfos = new List<RemoteSubtitleInfo>();
+
+                    foreach (var subFileInfo in subtitleResponse)
+                    {
+                        foreach (var subFile in subFileInfo.Files)
+                        {
+                            remoteSubtitleInfos.Add(new RemoteSubtitleInfo()
+                            {
+                                Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
+                                {
+                                    Url = subFile.Link,
+                                    Format = subFile.Ext,
+                                    Language = request.Language,
+                                    TwoLetterISOLanguageName = request.TwoLetterISOLanguageName
+                                })),
+                                Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.TwoLetterISOLanguageName} | 射手",
+                                Author = "Meiam ",
+                                ProviderName = "MeiamSub.Shooter",
+                                Format = subFile.Ext,
+                                Comment = $"Format : { ExtractFormat(subFile.Ext)}"
+                            });
+                        }
+                    }
+
+                    _logger.LogDebug($"MeiamSub.Shooter Search | Summary -> Get  { remoteSubtitleInfos.Count }  Subtitles");
+
+                    return remoteSubtitleInfos;
+                }
             }
+
+            _logger.LogDebug($"MeiamSub.Shooter Search | Summary -> Get  0  Subtitles");
+
             return Array.Empty<RemoteSubtitleInfo>();
         }
         #endregion
@@ -156,7 +165,7 @@ namespace Jellyfin.MeiamSub.Shooter
         {
             await Task.Run(() =>
             {
-                _logger.LogInformation($"MeiamSub.Shooter DownloadSub | Request -> {id}");
+                _logger.LogDebug($"MeiamSub.Shooter DownloadSub | Request -> {id}");
             });
 
             return await DownloadSubAsync(id);
@@ -169,31 +178,40 @@ namespace Jellyfin.MeiamSub.Shooter
         /// <returns></returns>
         private async Task<SubtitleResponse> DownloadSubAsync(string info)
         {
-            var downloadSub = _jsonSerializer.DeserializeFromString<DownloadSubInfo>(Base64Decode(info));
+            var downloadSub = JsonSerializer.Deserialize<DownloadSubInfo>(Base64Decode(info));
 
             downloadSub.Url = downloadSub.Url.Replace("https://www.shooter.cn", "http://www.shooter.cn");
 
-            _logger.LogInformation($"MeiamSub.Shooter DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
+            _logger.LogDebug($"MeiamSub.Shooter DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
 
-            using (var _httpClient = new HttpClient())
+
+            using var options = new HttpRequestMessage
+            {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri(downloadSub.Url),
+                Headers =
+                    {
+                        UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue("Emby.MeiamSub.Shooter")) },
+                        Accept = { new MediaTypeWithQualityHeaderValue("*/*") }
+                    }
+            };
+
+            var response = await _httpClient.SendAsync(options).ConfigureAwait(false);
+
+            _logger.LogDebug($"MeiamSub.Shooter DownloadSub | Response -> { response.StatusCode }");
+
+            if (response.StatusCode == HttpStatusCode.OK)
             {
 
-                var response = await _httpClient.GetAsync(downloadSub.Url);
-
-                _logger.LogInformation($"MeiamSub.Shooter DownloadSub | Response -> { response.StatusCode }");
-
-                if (response.StatusCode == HttpStatusCode.OK)
+                return new SubtitleResponse()
                 {
-
-                    return new SubtitleResponse()
-                    {
-                        Language = downloadSub.Language,
-                        IsForced = false,
-                        Format = downloadSub.Format,
-                        Stream = await response.Content.ReadAsStreamAsync(),
-                    };
-                }
+                    Language = downloadSub.Language,
+                    IsForced = false,
+                    Format = downloadSub.Format,
+                    Stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false),
+                };
             }
+
             return new SubtitleResponse();
 
         }
@@ -292,17 +310,6 @@ namespace Jellyfin.MeiamSub.Shooter
             fs.Close();
 
             return ret;
-        }
-        #endregion
-
-        #region HTTP
-        public async Task<HttpResponseMessage> PostAsync(string url, object data)
-        {
-            string content = _jsonSerializer.SerializeToString(data);
-            var buffer = Encoding.UTF8.GetBytes(content);
-            var byteContent = new ByteArrayContent(buffer);
-            byteContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-            return await Client.PostAsync(url, byteContent);
         }
         #endregion
     }
