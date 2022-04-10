@@ -28,10 +28,6 @@ namespace Jellyfin.MeiamSub.Thunder.Model
         /// 
         /// </summary>
         public int svote { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
-        public int roffset { get; set; }
     }
 
     public class SubtitleResponseRoot

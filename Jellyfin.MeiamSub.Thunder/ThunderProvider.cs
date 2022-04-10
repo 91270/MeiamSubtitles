@@ -45,7 +45,7 @@ namespace Jellyfin.MeiamSub.Thunder
         {
             _logger = logger;
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
-            _logger.LogDebug("MeiamSub.Thunder Init");
+            _logger.LogInformation($"{Name} Init");
         }
         #endregion
 
@@ -59,7 +59,7 @@ namespace Jellyfin.MeiamSub.Thunder
         /// <returns></returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
-            _logger.LogDebug($"MeiamSub.Thunder Search | Request -> { JsonSerializer.Serialize(request) }");
+            _logger.LogInformation($"{Name} Search | SubtitleSearchRequest -> { JsonSerializer.Serialize(request) }");
 
             var subtitles = await SearchSubtitlesAsync(request);
 
@@ -83,31 +83,32 @@ namespace Jellyfin.MeiamSub.Thunder
             using var options = new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
-                RequestUri = new Uri($"http://sub.xmp.sandai.net:8000/subxl/{cid}.json"),
+                //RequestUri = new Uri($"http://sub.xmp.sandai.net:8000/subxl/{cid}.json"),
+                RequestUri = new Uri($"http://subtitle.kankan.xunlei.com:8000/subxl/{cid}.json"),
                 Headers =
                     {
-                        UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue("Jellyfin.MeiamSub.Thunder")) },
-                        Accept = { new MediaTypeWithQualityHeaderValue("*/*") }
+                        UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue($"{Name}")) },
+                        Accept = { new MediaTypeWithQualityHeaderValue("*/*") },
                     }
             };
 
-            var response = await _httpClient.SendAsync(options).ConfigureAwait(false);
+            var response = await _httpClient.SendAsync(options);
 
-            _logger.LogDebug($"MeiamSub.Thunder Search | Response -> { JsonSerializer.Serialize(response) }");
+            _logger.LogInformation($"{Name} Search | Response -> { JsonSerializer.Serialize(response) }");
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                var subtitleResponse = JsonSerializer.Deserialize<SubtitleResponseRoot>(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                var subtitleResponse = JsonSerializer.Deserialize<SubtitleResponseRoot>(await response.Content.ReadAsStringAsync());
 
                 if (subtitleResponse != null)
                 {
-                    _logger.LogDebug($"MeiamSub.Thunder Search | Response -> { JsonSerializer.Serialize(subtitleResponse) }");
+                    _logger.LogInformation($"{Name} Search | Response -> { JsonSerializer.Serialize(subtitleResponse) }");
 
                     var subtitles = subtitleResponse.sublist.Where(m => !string.IsNullOrEmpty(m.sname));
 
                     if (subtitles.Count() > 0)
                     {
-                        _logger.LogDebug($"MeiamSub.Thunder Search | Summary -> Get  { subtitles.Count() }  Subtitles");
+                        _logger.LogInformation($"{Name} Search | Summary -> Get  { subtitles.Count() }  Subtitles");
 
                         return subtitles.Select(m => new RemoteSubtitleInfo()
                         {
@@ -121,7 +122,7 @@ namespace Jellyfin.MeiamSub.Thunder
                             Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.TwoLetterISOLanguageName} | 迅雷",
                             Author = "Meiam ",
                             CommunityRating = Convert.ToSingle(m.rate),
-                            ProviderName = "MeiamSub.Thunder",
+                            ProviderName = $"{Name}",
                             Format = ExtractFormat(m.sname),
                             Comment = $"Format : { ExtractFormat(m.sname)}  -  Rate : { m.rate }"
                         }).OrderByDescending(m => m.CommunityRating);
@@ -129,7 +130,7 @@ namespace Jellyfin.MeiamSub.Thunder
                 }
             }
 
-            _logger.LogDebug($"MeiamSub.Thunder Search | Summary -> Get  0  Subtitles");
+            _logger.LogInformation($"{Name} Search | Summary -> Get  0  Subtitles");
 
             return Array.Empty<RemoteSubtitleInfo>();
         }
@@ -144,10 +145,7 @@ namespace Jellyfin.MeiamSub.Thunder
         /// <returns></returns>
         public async Task<SubtitleResponse> GetSubtitles(string id, CancellationToken cancellationToken)
         {
-            await Task.Run(() =>
-            {
-                _logger.LogDebug($"MeiamSub.Thunder DownloadSub | Request -> {id}");
-            });
+            _logger.LogInformation($"{Name} DownloadSub | Request -> {id}");
 
             return await DownloadSubAsync(id);
         }
@@ -161,7 +159,12 @@ namespace Jellyfin.MeiamSub.Thunder
         {
             var downloadSub = JsonSerializer.Deserialize<DownloadSubInfo>(Base64Decode(info));
 
-            _logger.LogDebug($"MeiamSub.Thunder DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
+            if (downloadSub == null)
+            {
+                return new SubtitleResponse();
+            }
+
+            _logger.LogInformation($"{Name} DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
 
             using var options = new HttpRequestMessage
             {
@@ -169,24 +172,25 @@ namespace Jellyfin.MeiamSub.Thunder
                 RequestUri = new Uri(downloadSub.Url),
                 Headers =
                     {
-                        UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue("Jellyfin.MeiamSub.Thunder")) },
+                        UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue($"{Name}")) },
                         Accept = { new MediaTypeWithQualityHeaderValue("*/*") }
                     }
             };
 
-            var response = await _httpClient.SendAsync(options).ConfigureAwait(false);
+            var response = await _httpClient.SendAsync(options);
 
-            _logger.LogDebug($"MeiamSub.Thunder DownloadSub | Response -> { response.StatusCode }");
+            _logger.LogInformation($"{Name} DownloadSub | Response -> { response.StatusCode }");
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
+                var stream = await response.Content.ReadAsStreamAsync();
 
                 return new SubtitleResponse()
                 {
                     Language = downloadSub.Language,
                     IsForced = false,
                     Format = downloadSub.Format,
-                    Stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false),
+                    Stream = stream,
                 };
             }
 

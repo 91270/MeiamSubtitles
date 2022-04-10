@@ -15,6 +15,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace Jellyfin.MeiamSub.Shooter
 {
@@ -45,7 +46,7 @@ namespace Jellyfin.MeiamSub.Shooter
         {
             _logger = logger;
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
-            _logger.LogDebug("MeiamSub.Shooter Init");
+            _logger.LogInformation($"{Name} Init");
         }
         #endregion
 
@@ -59,7 +60,7 @@ namespace Jellyfin.MeiamSub.Shooter
         /// <returns></returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
-            _logger.LogDebug($"MeiamSub.Shooter Search | Request -> { JsonSerializer.Serialize(request) }");
+            _logger.LogInformation($"{Name} Search | SubtitleSearchRequest -> { JsonSerializer.Serialize(request) }");
 
             var subtitles = await SearchSubtitlesAsync(request);
 
@@ -78,45 +79,45 @@ namespace Jellyfin.MeiamSub.Shooter
                 return Array.Empty<RemoteSubtitleInfo>();
             }
 
-            FileInfo fileInfo = new FileInfo(request.MediaPath);
+            FileInfo fileInfo = new(request.MediaPath);
 
             var hash = ComputeFileHash(fileInfo);
 
-            HttpContent content = new FormUrlEncodedContent(new[]
+            var content = new StringContent(JsonSerializer.Serialize(new
             {
-                new KeyValuePair<string, string>("filehash", hash),
-                new KeyValuePair<string, string>("pathinfo", request.MediaPath),
-                new KeyValuePair<string, string>("format", "json"),
-                new KeyValuePair<string, string>("lang", request.Language == "chi" ? "chn" : "eng"),
-            });
+                filehash = HttpUtility.UrlEncode(hash),
+                pathinfo = HttpUtility.UrlEncode(request.MediaPath),
+                format = "json",
+                lang = request.Language == "chi" ? "chn" : "eng"
+            }), Encoding.UTF8, "application/json");
 
-            using var options = new HttpRequestMessage
+
+            var options = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                RequestUri = new Uri("http://www.shooter.cn/api/subapi.php"),
+                RequestUri = new Uri($"http://www.shooter.cn/api/subapi.php"),
                 Content = content,
                 Headers =
-                {
-                    UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue("Jellyfin.MeiamSub.Shooter")) },
-                    Accept = { new MediaTypeWithQualityHeaderValue("*/*") }
-                }
+                    {
+                        UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue($"{Name}")) },
+                        Accept = { new MediaTypeWithQualityHeaderValue("*/*") }
+                    }
             };
 
-            _logger.LogDebug($"MeiamSub.Shooter Search | Request -> { JsonSerializer.Serialize(options) }");
 
+            _logger.LogInformation($"{Name} Search | Request -> { JsonSerializer.Serialize(options) }");
 
-            var response = await _httpClient.SendAsync(options).ConfigureAwait(false);
+            var response = await _httpClient.SendAsync(options);
 
-
-            _logger.LogDebug($"MeiamSub.Shooter Search | Response -> { JsonSerializer.Serialize(response) }");
+            _logger.LogInformation($"{Name} Search | Response -> { JsonSerializer.Serialize(response) }");
 
             if (response.StatusCode == HttpStatusCode.OK && response.Headers.Any(m => m.Value.Contains("application/json")))
             {
-                var subtitleResponse = JsonSerializer.Deserialize<List<SubtitleResponseRoot>>(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                var subtitleResponse = JsonSerializer.Deserialize<List<SubtitleResponseRoot>>(await response.Content.ReadAsStringAsync());
 
                 if (subtitleResponse != null)
                 {
-                    _logger.LogDebug($"MeiamSub.Shooter Search | Response -> { JsonSerializer.Serialize(subtitleResponse) }");
+                    _logger.LogInformation($"{Name} Search | Response -> { JsonSerializer.Serialize(subtitleResponse) }");
 
                     var remoteSubtitleInfos = new List<RemoteSubtitleInfo>();
 
@@ -131,24 +132,25 @@ namespace Jellyfin.MeiamSub.Shooter
                                     Url = subFile.Link,
                                     Format = subFile.Ext,
                                     Language = request.Language,
-                                    TwoLetterISOLanguageName = request.TwoLetterISOLanguageName
+                                    TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
                                 })),
                                 Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.TwoLetterISOLanguageName} | 射手",
                                 Author = "Meiam ",
-                                ProviderName = "MeiamSub.Shooter",
+                                ProviderName = $"{Name}",
                                 Format = subFile.Ext,
                                 Comment = $"Format : { ExtractFormat(subFile.Ext)}"
                             });
                         }
                     }
 
-                    _logger.LogDebug($"MeiamSub.Shooter Search | Summary -> Get  { remoteSubtitleInfos.Count }  Subtitles");
+                    _logger.LogInformation($"{Name} Search | Summary -> Get  { remoteSubtitleInfos.Count }  Subtitles");
 
                     return remoteSubtitleInfos;
                 }
             }
 
-            _logger.LogDebug($"MeiamSub.Shooter Search | Summary -> Get  0  Subtitles");
+            _logger.LogInformation($"{Name} Search | Summary -> Get  0  Subtitles");
+
 
             return Array.Empty<RemoteSubtitleInfo>();
         }
@@ -163,10 +165,7 @@ namespace Jellyfin.MeiamSub.Shooter
         /// <returns></returns>
         public async Task<SubtitleResponse> GetSubtitles(string id, CancellationToken cancellationToken)
         {
-            await Task.Run(() =>
-            {
-                _logger.LogDebug($"MeiamSub.Shooter DownloadSub | Request -> {id}");
-            });
+            _logger.LogInformation($"{Name} DownloadSub | Request -> {id}");
 
             return await DownloadSubAsync(id);
         }
@@ -180,10 +179,14 @@ namespace Jellyfin.MeiamSub.Shooter
         {
             var downloadSub = JsonSerializer.Deserialize<DownloadSubInfo>(Base64Decode(info));
 
+            if (downloadSub == null)
+            {
+                return new SubtitleResponse();
+            }
+
             downloadSub.Url = downloadSub.Url.Replace("https://www.shooter.cn", "http://www.shooter.cn");
 
-            _logger.LogDebug($"MeiamSub.Shooter DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
-
+            _logger.LogInformation($"{Name} DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
 
             using var options = new HttpRequestMessage
             {
@@ -191,24 +194,25 @@ namespace Jellyfin.MeiamSub.Shooter
                 RequestUri = new Uri(downloadSub.Url),
                 Headers =
                     {
-                        UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue("Emby.MeiamSub.Shooter")) },
+                        UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue($"{Name}")) },
                         Accept = { new MediaTypeWithQualityHeaderValue("*/*") }
                     }
             };
 
-            var response = await _httpClient.SendAsync(options).ConfigureAwait(false);
+            var response = await _httpClient.SendAsync(options);
 
-            _logger.LogDebug($"MeiamSub.Shooter DownloadSub | Response -> { response.StatusCode }");
+            _logger.LogInformation($"{Name} DownloadSub | Response -> { response.StatusCode }");
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
+                var stream = await response.Content.ReadAsStreamAsync();
 
                 return new SubtitleResponse()
                 {
                     Language = downloadSub.Language,
                     IsForced = false,
                     Format = downloadSub.Format,
-                    Stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false),
+                    Stream = stream,
                 };
             }
 

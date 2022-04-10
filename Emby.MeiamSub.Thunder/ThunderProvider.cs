@@ -47,6 +47,7 @@ namespace Emby.MeiamSub.Thunder
             _logger = logger;
             _jsonSerializer = jsonSerializer;
             _httpClient = httpClient;
+            _logger.Info($"{Name} Init");
         }
         #endregion
 
@@ -60,7 +61,7 @@ namespace Emby.MeiamSub.Thunder
         /// <returns></returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
-            _logger.Debug($"MeiamSub.Thunder Search | Request -> { _jsonSerializer.SerializeToString(request) }");
+            _logger.Info($"{Name} Search | SubtitleSearchRequest -> { _jsonSerializer.SerializeToString(request) }");
 
             var subtitles = await SearchSubtitlesAsync(request);
 
@@ -83,13 +84,14 @@ namespace Emby.MeiamSub.Thunder
 
             var response = await _httpClient.GetResponse(new HttpRequestOptions
             {
-                Url = $"http://sub.xmp.sandai.net:8000/subxl/{cid}.json",
-                UserAgent = "Emby.MeiamSub.Thunder",
+                //Url = $"http://sub.xmp.sandai.net:8000/subxl/{cid}.json",
+                Url = $"http://subtitle.kankan.xunlei.com:8000/subxl/{cid}.json",
+                UserAgent = $"{Name}",
                 TimeoutMs = 30000,
                 AcceptHeader = "*/*",
             });
 
-            _logger.Debug($"MeiamSub.Thunder Search | Response -> { _jsonSerializer.SerializeToString(response) }");
+            _logger.Info($"{Name} Search | Response -> { _jsonSerializer.SerializeToString(response) }");
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
@@ -97,13 +99,13 @@ namespace Emby.MeiamSub.Thunder
 
                 if (subtitleResponse != null)
                 {
-                    _logger.Debug($"MeiamSub.Thunder Search | Response -> { _jsonSerializer.SerializeToString(subtitleResponse) }");
+                    _logger.Info($"{Name} Search | Response -> { _jsonSerializer.SerializeToString(subtitleResponse) }");
 
                     var subtitles = subtitleResponse.sublist.Where(m => !string.IsNullOrEmpty(m.sname));
 
                     if (subtitles.Count() > 0)
                     {
-                        _logger.Debug($"MeiamSub.Thunder Search | Summary -> Get  { subtitles.Count() }  Subtitles");
+                        _logger.Info($"{Name} Search | Summary -> Get  { subtitles.Count() }  Subtitles");
 
                         return subtitles.Select(m => new RemoteSubtitleInfo()
                         {
@@ -118,7 +120,7 @@ namespace Emby.MeiamSub.Thunder
                             Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.TwoLetterISOLanguageName} | 迅雷",
                             Author = "Meiam ",
                             CommunityRating = Convert.ToSingle(m.rate),
-                            ProviderName = "MeiamSub.Thunder",
+                            ProviderName = $"{Name}",
                             Format = ExtractFormat(m.sname),
                             Comment = $"Format : { ExtractFormat(m.sname)}  -  Rate : { m.rate }"
                         }).OrderByDescending(m => m.CommunityRating);
@@ -126,7 +128,7 @@ namespace Emby.MeiamSub.Thunder
                 }
             }
 
-            _logger.Debug($"MeiamSub.Thunder Search | Summary -> Get  0  Subtitles");
+            _logger.Info($"{Name} Search | Summary -> Get  0  Subtitles");
 
             return Array.Empty<RemoteSubtitleInfo>();
         }
@@ -141,10 +143,7 @@ namespace Emby.MeiamSub.Thunder
         /// <returns></returns>
         public async Task<SubtitleResponse> GetSubtitles(string id, CancellationToken cancellationToken)
         {
-            await Task.Run(() =>
-            {
-                _logger.Debug($"MeiamSub.Thunder DownloadSub | Request -> {id}");
-            });
+            _logger.Info($"{Name} DownloadSub | Request -> {id}");
 
             return await DownloadSubAsync(id);
         }
@@ -158,17 +157,22 @@ namespace Emby.MeiamSub.Thunder
         {
             var downloadSub = _jsonSerializer.DeserializeFromString<DownloadSubInfo>(Base64Decode(info));
 
-            _logger.Debug($"MeiamSub.Thunder DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
+            if (downloadSub == null)
+            {
+                return new SubtitleResponse();
+            }
+
+            _logger.Info($"{Name} DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
 
             var response = await _httpClient.GetResponse(new HttpRequestOptions
             {
                 Url = downloadSub.Url,
-                UserAgent = "Emby.MeiamSub.Thunder",
+                UserAgent = $"{Name}",
                 TimeoutMs = 30000,
                 AcceptHeader = "*/*",
             });
 
-            _logger.Debug($"MeiamSub.Thunder DownloadSub | Response -> { response.StatusCode }");
+            _logger.Info($"{Name} DownloadSub | Response -> { response.StatusCode }");
 
             if (response.StatusCode == HttpStatusCode.OK)
             {

@@ -47,6 +47,7 @@ namespace Emby.MeiamSub.Shooter
             _logger = logger;
             _jsonSerializer = jsonSerializer;
             _httpClient = httpClient;
+            _logger.Info($"{Name} Init");
         }
         #endregion
 
@@ -60,7 +61,7 @@ namespace Emby.MeiamSub.Shooter
         /// <returns></returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
-            _logger.Debug($"MeiamSub.Shooter Search | Request -> { _jsonSerializer.SerializeToString(request) }");
+            _logger.Info($"{Name} Search | SubtitleSearchRequest -> { _jsonSerializer.SerializeToString(request) }");
 
             var subtitles = await SearchSubtitlesAsync(request);
 
@@ -86,7 +87,7 @@ namespace Emby.MeiamSub.Shooter
             HttpRequestOptions options = new HttpRequestOptions
             {
                 Url = $"http://www.shooter.cn/api/subapi.php",
-                UserAgent = "Emby.MeiamSub.Shooter",
+                UserAgent = $"{Name}",
                 TimeoutMs = 30000,
                 AcceptHeader = "*/*",
             };
@@ -99,11 +100,11 @@ namespace Emby.MeiamSub.Shooter
                 { "lang",request.Language ==  "chi" ? "chn" : "eng"}
             });
 
-            _logger.Debug($"MeiamSub.Shooter Search | Request -> { _jsonSerializer.SerializeToString(options) }");
+            _logger.Info($"{Name} Search | Request -> { _jsonSerializer.SerializeToString(options) }");
 
             var response = await _httpClient.Post(options);
 
-            _logger.Debug($"MeiamSub.Shooter Search | Response -> { _jsonSerializer.SerializeToString(response) }");
+            _logger.Info($"{Name} Search | Response -> { _jsonSerializer.SerializeToString(response) }");
 
             if (response.StatusCode == HttpStatusCode.OK && response.ContentType.Contains("application/json"))
             {
@@ -111,7 +112,7 @@ namespace Emby.MeiamSub.Shooter
 
                 if (subtitleResponse != null)
                 {
-                    _logger.Debug($"MeiamSub.Shooter Search | Response -> { _jsonSerializer.SerializeToString(subtitleResponse) }");
+                    _logger.Info($"{Name} Search | Response -> { _jsonSerializer.SerializeToString(subtitleResponse) }");
 
                     var remoteSubtitleInfos = new List<RemoteSubtitleInfo>();
 
@@ -131,20 +132,20 @@ namespace Emby.MeiamSub.Shooter
                                 })),
                                 Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.TwoLetterISOLanguageName} | 射手",
                                 Author = "Meiam ",
-                                ProviderName = "MeiamSub.Shooter",
+                                ProviderName = $"{Name}",
                                 Format = subFile.Ext,
                                 Comment = $"Format : { ExtractFormat(subFile.Ext)}"
                             });
                         }
                     }
 
-                    _logger.Debug($"MeiamSub.Shooter Search | Summary -> Get  { remoteSubtitleInfos.Count }  Subtitles");
+                    _logger.Info($"{Name} Search | Summary -> Get  { remoteSubtitleInfos.Count }  Subtitles");
 
                     return remoteSubtitleInfos;
                 }
             }
 
-            _logger.Debug($"MeiamSub.Shooter Search | Summary -> Get  0  Subtitles");
+            _logger.Info($"{Name} Search | Summary -> Get  0  Subtitles");
 
             return Array.Empty<RemoteSubtitleInfo>();
         }
@@ -159,10 +160,7 @@ namespace Emby.MeiamSub.Shooter
         /// <returns></returns>
         public async Task<SubtitleResponse> GetSubtitles(string id, CancellationToken cancellationToken)
         {
-            await Task.Run(() =>
-            {
-                _logger.Debug($"MeiamSub.Shooter DownloadSub | Request -> {id}");
-            });
+            _logger.Info($"{Name} DownloadSub | Request -> {id}");
 
             return await DownloadSubAsync(id);
         }
@@ -176,20 +174,25 @@ namespace Emby.MeiamSub.Shooter
         {
             var downloadSub = _jsonSerializer.DeserializeFromString<DownloadSubInfo>(Base64Decode(info));
 
+            if (downloadSub == null)
+            {
+                return new SubtitleResponse();
+            }
+
             downloadSub.Url = downloadSub.Url.Replace("https://www.shooter.cn", "http://www.shooter.cn");
 
-            _logger.Debug($"MeiamSub.Shooter DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
+            _logger.Info($"{Name} DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
 
             var response = await _httpClient.GetResponse(new HttpRequestOptions
             {
                 Url = downloadSub.Url,
-                UserAgent = "Emby.MeiamSub.Shooter",
+                UserAgent = $"{Name}",
                 TimeoutMs = 30000,
                 AcceptHeader = "*/*",
             });
 
 
-            _logger.Debug($"MeiamSub.Shooter DownloadSub | Response -> { response.StatusCode }");
+            _logger.Info($"{Name} DownloadSub | Response -> { response.StatusCode }");
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
