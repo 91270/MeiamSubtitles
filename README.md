@@ -65,6 +65,14 @@ Emby Jellyfin 中文字幕插件 ，支持 迅雷影音、射手网、 精准匹
 重启服务
 ```
 
+### 威联通
+```bash
+# 其中`CACHEDEV{num}_DATA`的名称取决于你的qpkg安装位置
+复制插件文件到 /share/CACHEDEV1_DATA/.qpkg/EmbyServer/programdata/plugins
+复制插件文件到 /share/CACHEDEV1_DATA/.qpkg/EmbyServer/system/plugins
+重启服务
+```
+
 &nbsp;
 
 ## 贡献
