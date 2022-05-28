@@ -127,10 +127,9 @@ namespace Emby.MeiamSub.Shooter
                                     Url = subFile.Link,
                                     Format = subFile.Ext,
                                     Language = request.Language,
-                                    TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
                                     IsForced = request.IsForced
                                 })),
-                                Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.TwoLetterISOLanguageName} | 射手",
+                                Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.Language} | 射手",
                                 Author = "Meiam ",
                                 ProviderName = $"{Name}",
                                 Format = subFile.Ext,

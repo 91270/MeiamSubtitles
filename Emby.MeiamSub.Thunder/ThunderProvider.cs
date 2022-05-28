@@ -114,10 +114,9 @@ namespace Emby.MeiamSub.Thunder
                                 Url = m.surl,
                                 Format = ExtractFormat(m.sname),
                                 Language = request.Language,
-                                TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
                                 IsForced = request.IsForced
                             })),
-                            Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.TwoLetterISOLanguageName} | 迅雷",
+                            Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.Language} | 迅雷",
                             Author = "Meiam ",
                             CommunityRating = Convert.ToSingle(m.rate),
                             ProviderName = $"{Name}",
