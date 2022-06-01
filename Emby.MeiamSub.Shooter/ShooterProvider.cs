@@ -75,6 +75,12 @@ namespace Emby.MeiamSub.Shooter
         /// <returns></returns>
         private async Task<IEnumerable<RemoteSubtitleInfo>> SearchSubtitlesAsync(SubtitleSearchRequest request)
         {
+            if(request.Language == "zh-CN" || request.Language == "zh-TW" || request.Language == "zh-HK"){
+                request.Language = "chi";
+            }
+            if(request.Language == "en"){
+                request.Language = "eng";
+            }
             if (request.Language != "chi" && request.Language != "eng")
             {
                 return Array.Empty<RemoteSubtitleInfo>();
