@@ -78,10 +78,10 @@ namespace Emby.MeiamSub.Thunder
             if(request.Language == "zh-CN" || request.Language == "zh-TW" || request.Language == "zh-HK"){
                 request.Language = "chi";
             }
-            //if (request.Language != "chi")
-            //{
-            //    return Array.Empty<RemoteSubtitleInfo>();
-            //}
+            if (request.Language != "chi")
+            {
+                return Array.Empty<RemoteSubtitleInfo>();
+            }
 
             var cid = GetCidByFile(request.MediaPath);
 
