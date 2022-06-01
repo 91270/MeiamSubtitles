@@ -75,6 +75,9 @@ namespace Emby.MeiamSub.Thunder
         /// <returns></returns>
         private async Task<IEnumerable<RemoteSubtitleInfo>> SearchSubtitlesAsync(SubtitleSearchRequest request)
         {
+            if(request.Language == "zh-CN" || request.Language == "zh-TW" || request.Language == "zh-HK"){
+                request.Language = "chi";
+            }
             if (request.Language != "chi")
             {
                 return Array.Empty<RemoteSubtitleInfo>();
@@ -116,7 +119,7 @@ namespace Emby.MeiamSub.Thunder
                                 Language = request.Language,
                                 IsForced = request.IsForced
                             })),
-                            Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.Language} | 迅雷",
+                            Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {m.language} | 迅雷",
                             Author = "Meiam ",
                             CommunityRating = Convert.ToSingle(m.rate),
                             ProviderName = $"{Name}",
