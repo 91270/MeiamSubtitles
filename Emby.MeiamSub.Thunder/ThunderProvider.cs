@@ -32,7 +32,7 @@ namespace Emby.MeiamSub.Thunder
         private readonly IJsonSerializer _jsonSerializer;
         private readonly IHttpClient _httpClient;
 
-        public int Order => 0;
+        public int Order => 1;
         public string Name => "MeiamSub.Thunder";
 
         /// <summary>
@@ -124,7 +124,8 @@ namespace Emby.MeiamSub.Thunder
                             CommunityRating = Convert.ToSingle(m.rate),
                             ProviderName = $"{Name}",
                             Format = ExtractFormat(m.sname),
-                            Comment = $"Format : { ExtractFormat(m.sname)}  -  Rate : { m.rate }"
+                            Comment = $"Format : { ExtractFormat(m.sname)}  -  Rate : { m.rate }",
+                            IsHashMatch = true
                         }).OrderByDescending(m => m.CommunityRating);
                     }
                 }

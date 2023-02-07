@@ -32,7 +32,7 @@ namespace Emby.MeiamSub.Shooter
         private readonly IJsonSerializer _jsonSerializer;
         private readonly IHttpClient _httpClient;
 
-        public int Order => 0;
+        public int Order => 1;
         public string Name => "MeiamSub.Shooter";
 
         /// <summary>
@@ -139,7 +139,8 @@ namespace Emby.MeiamSub.Shooter
                                 Author = "Meiam ",
                                 ProviderName = $"{Name}",
                                 Format = subFile.Ext,
-                                Comment = $"Format : { ExtractFormat(subFile.Ext)}"
+                                Comment = $"Format : { ExtractFormat(subFile.Ext)}",
+                                IsHashMatch = true
                             });
                         }
                     }

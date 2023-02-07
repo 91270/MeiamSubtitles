@@ -32,7 +32,7 @@ namespace Jellyfin.MeiamSub.Shooter
         private readonly ILogger<ShooterProvider> _logger;
         private static readonly HttpClient _httpClient = new HttpClient();
 
-        public int Order => 0;
+        public int Order => 1;
         public string Name => "MeiamSub.Shooter";
 
         /// <summary>
@@ -138,7 +138,8 @@ namespace Jellyfin.MeiamSub.Shooter
                                 Author = "Meiam ",
                                 ProviderName = $"{Name}",
                                 Format = subFile.Ext,
-                                Comment = $"Format : { ExtractFormat(subFile.Ext)}"
+                                Comment = $"Format : { ExtractFormat(subFile.Ext)}",
+                                IsHashMatch = true     
                             });
                         }
                     }
