@@ -83,42 +83,38 @@ namespace Jellyfin.MeiamSub.Shooter
 
             var hash = ComputeFileHash(fileInfo);
 
-            var content = new StringContent(JsonSerializer.Serialize(new
-            {
-                filehash = HttpUtility.UrlEncode(hash),
-                pathinfo = HttpUtility.UrlEncode(request.MediaPath),
-                format = "json",
-                lang = request.Language == "chi" ? "chn" : "eng"
-            }), Encoding.UTF8, "application/json");
+            _logger.LogInformation($"{Name} Search | FileHash -> { hash }");
 
-
-            var options = new HttpRequestMessage
+            var content = new Dictionary<string, string>
             {
-                Method = HttpMethod.Post,
-                RequestUri = new Uri($"http://www.shooter.cn/api/subapi.php"),
-                Content = content,
-                Headers =
-                    {
-                        UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue($"{Name}")) },
-                        Accept = { new MediaTypeWithQualityHeaderValue("*/*") }
-                    }
+                { "filehash", hash},
+                { "pathinfo", request.MediaPath},
+                { "format", "json"},
+                { "lang", request.Language ==  "chi" ? "chn" : "eng"}
             };
 
 
-            _logger.LogInformation($"{Name} Search | Request -> { JsonSerializer.Serialize(options) }");
+            HttpRequestMessage requestMessage = new HttpRequestMessage();
 
-            var response = await _httpClient.SendAsync(options);
+            requestMessage.Method = HttpMethod.Post;
+            requestMessage.RequestUri = new Uri($"https://www.shooter.cn/api/subapi.php");
+            requestMessage.Content = new FormUrlEncodedContent(content);
+            requestMessage.Headers.Add("User-Agent", $"{Name}");
+            requestMessage.Headers.Add("Accept-Encoding", $"gzip, deflate, br");
+            requestMessage.Headers.Add("Accept", $"*/*");
+
+            var response = await _httpClient.SendAsync(requestMessage);
 
             _logger.LogInformation($"{Name} Search | Response -> { JsonSerializer.Serialize(response) }");
 
-            if (response.StatusCode == HttpStatusCode.OK && response.Headers.Any(m => m.Value.Contains("application/json")))
+            if (response.StatusCode == HttpStatusCode.OK && response.Content.Headers.Any(m => m.Value.Contains("application/json; charset=utf-8")))
             {
                 var subtitleResponse = JsonSerializer.Deserialize<List<SubtitleResponseRoot>>(await response.Content.ReadAsStringAsync());
 
+                _logger.LogInformation($"{Name} Search | Response -> { JsonSerializer.Serialize(subtitleResponse) }");
+
                 if (subtitleResponse != null)
                 {
-                    _logger.LogInformation($"{Name} Search | Response -> { JsonSerializer.Serialize(subtitleResponse) }");
-
                     var remoteSubtitleInfos = new List<RemoteSubtitleInfo>();
 
                     foreach (var subFileInfo in subtitleResponse)
@@ -184,8 +180,6 @@ namespace Jellyfin.MeiamSub.Shooter
             {
                 return new SubtitleResponse();
             }
-
-            downloadSub.Url = downloadSub.Url.Replace("https://www.shooter.cn", "http://www.shooter.cn");
 
             _logger.LogInformation($"{Name} DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
 

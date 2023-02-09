@@ -80,6 +80,8 @@ namespace Jellyfin.MeiamSub.Thunder
 
             var cid = GetCidByFile(request.MediaPath);
 
+            _logger.LogInformation($"{Name} Search | FileHash -> { cid }");
+
             using var options = new HttpRequestMessage
             {
                 Method = HttpMethod.Get,

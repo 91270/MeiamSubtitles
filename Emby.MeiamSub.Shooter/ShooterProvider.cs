@@ -90,9 +90,11 @@ namespace Emby.MeiamSub.Shooter
 
             var hash = ComputeFileHash(fileInfo);
 
+            _logger.Info($"{Name} Search | FileHash -> { hash }");
+
             HttpRequestOptions options = new HttpRequestOptions
             {
-                Url = $"http://www.shooter.cn/api/subapi.php",
+                Url = $"https://www.shooter.cn/api/subapi.php",
                 UserAgent = $"{Name}",
                 TimeoutMs = 30000,
                 AcceptHeader = "*/*",
@@ -184,8 +186,6 @@ namespace Emby.MeiamSub.Shooter
             {
                 return new SubtitleResponse();
             }
-
-            downloadSub.Url = downloadSub.Url.Replace("https://www.shooter.cn", "http://www.shooter.cn");
 
             _logger.Info($"{Name} DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
 

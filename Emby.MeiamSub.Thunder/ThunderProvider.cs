@@ -85,6 +85,8 @@ namespace Emby.MeiamSub.Thunder
 
             var cid = GetCidByFile(request.MediaPath);
 
+            _logger.Info($"{Name} Search | FileHash -> { cid }");
+
             var response = await _httpClient.GetResponse(new HttpRequestOptions
             {
                 //Url = $"http://sub.xmp.sandai.net:8000/subxl/{cid}.json",
