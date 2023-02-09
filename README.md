@@ -62,7 +62,7 @@ Emby Jellyfin 中文字幕插件 ，支持 迅雷影音、射手网、 精准匹
 
 ### 群晖
 ```bash
-复制插件文件到 /var/packages/EmbyServer/target/var/plugins
+复制插件文件到 /var/packages/EmbyServer/var/plugins
 复制插件文件到 /var/packages/EmbyServer/target/system/plugins
 重启服务
 ```
