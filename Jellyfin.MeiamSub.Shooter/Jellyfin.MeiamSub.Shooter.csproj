@@ -15,4 +15,8 @@
     <PackageReference Include="Jellyfin.Controller" Version="10.7.0" />
   </ItemGroup>
 
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="Copy $(TargetDir)$(TargetFileName) $(SolutionDir)$(ConfigurationName)\$(TargetFileName) /y&#xD;&#xA;" />
+  </Target>
+
 </Project>

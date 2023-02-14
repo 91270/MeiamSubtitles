@@ -27,4 +27,8 @@
     <PackageReference Include="MediaBrowser.Server.Core" Version="4.4.2" />
   </ItemGroup>
 
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="Copy $(TargetDir)$(TargetFileName) $(SolutionDir)$(ConfigurationName)\$(TargetFileName) /y&#xD;&#xA;" />
+  </Target>
+
 </Project>
