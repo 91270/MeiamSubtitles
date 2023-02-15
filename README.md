@@ -75,6 +75,13 @@ Emby Jellyfin 中文字幕插件 ，支持 迅雷影音、射手网、 精准匹
 重启服务
 ```
 
+
+### Jellyfin 可通过存储库安装、更新插件
+```bash
+# 通过 控制台 -> 插件 -> 存储库 添加存储库 URL , 即可通过插件目录查看并安装插件
+https://github.com/91270/MeiamSubtitles.Release/raw/main/Plugin/manifest-stable.json
+```
+
 &nbsp;
 
 ## 贡献
