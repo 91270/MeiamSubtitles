@@ -35,8 +35,8 @@ Emby Jellyfin 中文字幕插件 ，支持 迅雷影音、射手网、 精准匹
 | 1 | 开发程序 | Emby.MeiamSub.DevTool | 项目开发测试调试使用
 | 2 | 字幕插件 | Emby.MeiamSub.Thunder | 迅雷看看字幕插件 - Emby
 | 3 | 字幕插件 | Emby.MeiamSub.Shooter | 射手影音字幕插件 - Emby
-| 3 | 字幕插件 | Jellyfin.MeiamSub.Shooter | 迅雷看看字幕插件 - Jellyfin
-| 3 | 字幕插件 | Jellyfin.MeiamSub.Thunder | 射手影音字幕插件 - Jellyfin
+| 4 | 字幕插件 | Jellyfin.MeiamSub.Shooter | 迅雷看看字幕插件 - Jellyfin
+| 5 | 字幕插件 | Jellyfin.MeiamSub.Thunder | 射手影音字幕插件 - Jellyfin
 
 
 
