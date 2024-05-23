@@ -256,12 +256,12 @@ namespace Jellyfin.MeiamSub.Thunder
             var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
             var reader = new BinaryReader(stream);
             var fileSize = new FileInfo(filePath).Length;
-            var SHA1 = new SHA1CryptoServiceProvider();
+            var sha1 = SHA1.Create();
             var buffer = new byte[0xf000];
             if (fileSize < 0xf000)
             {
                 reader.Read(buffer, 0, (int)fileSize);
-                buffer = SHA1.ComputeHash(buffer, 0, (int)fileSize);
+                buffer = sha1.ComputeHash(buffer, 0, (int)fileSize);
             }
             else
             {
@@ -271,7 +271,7 @@ namespace Jellyfin.MeiamSub.Thunder
                 stream.Seek(fileSize - 0x5000, SeekOrigin.Begin);
                 reader.Read(buffer, 0xa000, 0x5000);
 
-                buffer = SHA1.ComputeHash(buffer, 0, 0xf000);
+                buffer = sha1.ComputeHash(buffer, 0, 0xf000);
             }
             var result = "";
             foreach (var i in buffer)
