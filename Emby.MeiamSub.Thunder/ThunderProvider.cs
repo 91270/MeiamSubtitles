@@ -42,12 +42,12 @@ namespace Emby.MeiamSub.Thunder
         #endregion
 
         #region 构造函数
-        public ThunderProvider(ILogger logger, IJsonSerializer jsonSerializer,IHttpClient httpClient)
+        public ThunderProvider(ILogManager logManager, IJsonSerializer jsonSerializer, IHttpClient httpClient)
         {
-            _logger = logger;
+            _logger = logManager.GetLogger(GetType().Name);
             _jsonSerializer = jsonSerializer;
             _httpClient = httpClient;
-            _logger.Info($"{Name} Init");
+            _logger.Info("{0} Init", new object[1] { Name });
         }
         #endregion
 
@@ -61,7 +61,7 @@ namespace Emby.MeiamSub.Thunder
         /// <returns></returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
-            _logger.Info($"{Name} Search | SubtitleSearchRequest -> { _jsonSerializer.SerializeToString(request) }");
+            _logger.Info($"{0} Search | SubtitleSearchRequest -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(request) });
 
             var subtitles = await SearchSubtitlesAsync(request);
 
@@ -85,7 +85,7 @@ namespace Emby.MeiamSub.Thunder
 
             var cid = GetCidByFile(request.MediaPath);
 
-            _logger.Info($"{Name} Search | FileHash -> { cid }");
+            _logger.Info($"{0} Search | FileHash -> {1}", new object[2] { Name, cid });     
 
             var response = await _httpClient.GetResponse(new HttpRequestOptions
             {
@@ -96,7 +96,7 @@ namespace Emby.MeiamSub.Thunder
                 AcceptHeader = "*/*",
             });
 
-            _logger.Info($"{Name} Search | Response -> { _jsonSerializer.SerializeToString(response) }");
+            _logger.Info($"{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(response) });
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
@@ -104,13 +104,13 @@ namespace Emby.MeiamSub.Thunder
 
                 if (subtitleResponse != null)
                 {
-                    _logger.Info($"{Name} Search | Response -> { _jsonSerializer.SerializeToString(subtitleResponse) }");
+                    _logger.Info($"{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(subtitleResponse) });
 
                     var subtitles = subtitleResponse.sublist.Where(m => !string.IsNullOrEmpty(m.sname));
 
                     if (subtitles.Count() > 0)
                     {
-                        _logger.Info($"{Name} Search | Summary -> Get  { subtitles.Count() }  Subtitles");
+                        _logger.Info($"{0} Search | Summary -> Get  {1}  Subtitles", new object[2] { Name, subtitles.Count() });
 
                         return subtitles.Select(m => new RemoteSubtitleInfo()
                         {
@@ -133,7 +133,8 @@ namespace Emby.MeiamSub.Thunder
                 }
             }
 
-            _logger.Info($"{Name} Search | Summary -> Get  0  Subtitles");
+            _logger.Info($"{0} Search | Summary -> Get  0  Subtitles", new object[1] { Name });
+
 
             return Array.Empty<RemoteSubtitleInfo>();
         }
@@ -148,7 +149,7 @@ namespace Emby.MeiamSub.Thunder
         /// <returns></returns>
         public async Task<SubtitleResponse> GetSubtitles(string id, CancellationToken cancellationToken)
         {
-            _logger.Info($"{Name} DownloadSub | Request -> {id}");
+            _logger.Info($"{0} DownloadSub | Request -> {1}", new object[2] { Name, id });  
 
             return await DownloadSubAsync(id);
         }
@@ -167,7 +168,8 @@ namespace Emby.MeiamSub.Thunder
                 return new SubtitleResponse();
             }
 
-            _logger.Info($"{Name} DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
+            _logger.Info($"{0} DownloadSub | Url -> {1}  |  Format -> {2} |  Language -> {3} ",
+                new object[4] { Name, downloadSub.Url, downloadSub.Format, downloadSub.Language });
 
             var response = await _httpClient.GetResponse(new HttpRequestOptions
             {
@@ -177,7 +179,7 @@ namespace Emby.MeiamSub.Thunder
                 AcceptHeader = "*/*",
             });
 
-            _logger.Info($"{Name} DownloadSub | Response -> { response.StatusCode }");
+            _logger.Info($"{0} DownloadSub | Response -> {1}", new object[2] { Name, response.StatusCode });
 
             if (response.StatusCode == HttpStatusCode.OK)
             {

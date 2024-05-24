@@ -15,6 +15,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Emby.MeiamSub.Shooter
 {
@@ -28,7 +29,7 @@ namespace Emby.MeiamSub.Shooter
         public const string SSA = "ssa";
         public const string SRT = "srt";
 
-        private readonly ILogger _logger;
+        protected readonly ILogger _logger;
         private readonly IJsonSerializer _jsonSerializer;
         private readonly IHttpClient _httpClient;
 
@@ -42,12 +43,12 @@ namespace Emby.MeiamSub.Shooter
         #endregion
 
         #region 构造函数
-        public ShooterProvider(ILogger logger, IJsonSerializer jsonSerializer,IHttpClient httpClient)
+        public ShooterProvider(ILogManager logManager, IJsonSerializer jsonSerializer,IHttpClient httpClient)
         {
-            _logger = logger;
+            _logger = logManager.GetLogger(GetType().Name);
             _jsonSerializer = jsonSerializer;
             _httpClient = httpClient;
-            _logger.Info($"{Name} Init");
+            _logger.Info("{0} Init", new object[1] { Name });
         }
         #endregion
 
@@ -61,7 +62,7 @@ namespace Emby.MeiamSub.Shooter
         /// <returns></returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
-            _logger.Info($"{Name} Search | SubtitleSearchRequest -> { _jsonSerializer.SerializeToString(request) }");
+            _logger.Info("{0} Search | SubtitleSearchRequest -> {1}", new object[2] { Name , _jsonSerializer.SerializeToString(request) });
 
             var subtitles = await SearchSubtitlesAsync(request);
 
@@ -90,7 +91,7 @@ namespace Emby.MeiamSub.Shooter
 
             var hash = ComputeFileHash(fileInfo);
 
-            _logger.Info($"{Name} Search | FileHash -> { hash }");
+            _logger.Info("{0} Search | FileHash -> {1}", new object[2] { Name, hash });
 
             HttpRequestOptions options = new HttpRequestOptions
             {
@@ -108,11 +109,11 @@ namespace Emby.MeiamSub.Shooter
                 { "lang",request.Language ==  "chi" ? "chn" : "eng"}
             });
 
-            _logger.Info($"{Name} Search | Request -> { _jsonSerializer.SerializeToString(options) }");
+            _logger.Info("{0} Search | Request -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(options) });
 
             var response = await _httpClient.Post(options);
 
-            _logger.Info($"{Name} Search | Response -> { _jsonSerializer.SerializeToString(response) }");
+            _logger.Info("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(response) });
 
             if (response.StatusCode == HttpStatusCode.OK && response.ContentType.Contains("application/json"))
             {
@@ -120,7 +121,7 @@ namespace Emby.MeiamSub.Shooter
 
                 if (subtitleResponse != null)
                 {
-                    _logger.Info($"{Name} Search | Response -> { _jsonSerializer.SerializeToString(subtitleResponse) }");
+                    _logger.Info("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(subtitleResponse) });
 
                     var remoteSubtitleInfos = new List<RemoteSubtitleInfo>();
 
@@ -146,14 +147,14 @@ namespace Emby.MeiamSub.Shooter
                             });
                         }
                     }
+                    _logger.Info("{0} Search | Summary -> Get  {1}  Subtitles", new object[2] { Name, remoteSubtitleInfos.Count });
 
-                    _logger.Info($"{Name} Search | Summary -> Get  { remoteSubtitleInfos.Count }  Subtitles");
 
                     return remoteSubtitleInfos;
                 }
             }
 
-            _logger.Info($"{Name} Search | Summary -> Get  0  Subtitles");
+            _logger.Info("{0} Search | Summary -> Get  0  Subtitles", new object[1] { Name });
 
             return Array.Empty<RemoteSubtitleInfo>();
         }
@@ -168,7 +169,7 @@ namespace Emby.MeiamSub.Shooter
         /// <returns></returns>
         public async Task<SubtitleResponse> GetSubtitles(string id, CancellationToken cancellationToken)
         {
-            _logger.Info($"{Name} DownloadSub | Request -> {id}");
+            _logger.Info("{0}  DownloadSub | Request -> {1}", new object[2] { Name, id });
 
             return await DownloadSubAsync(id);
         }
@@ -187,7 +188,8 @@ namespace Emby.MeiamSub.Shooter
                 return new SubtitleResponse();
             }
 
-            _logger.Info($"{Name} DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
+            _logger.Info($"{0} DownloadSub | Url -> {1}  |  Format -> {2} |  Language -> {3} " , 
+                new object[4] { Name, downloadSub.Url, downloadSub.Format, downloadSub.Language });
 
             var response = await _httpClient.GetResponse(new HttpRequestOptions
             {
@@ -198,7 +200,8 @@ namespace Emby.MeiamSub.Shooter
             });
 
 
-            _logger.Info($"{Name} DownloadSub | Response -> { response.StatusCode }");
+            _logger.Info("{0}  DownloadSub | Request -> {1}", new object[2] { Name, response.StatusCode });
+
 
             if (response.StatusCode == HttpStatusCode.OK)
             {

@@ -5,11 +5,11 @@
     <FileVersion>1.0.10.0</FileVersion>
     <Version>1.0.10</Version>
   </PropertyGroup>
-  
+
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
-  
+
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <OutputPath>..\Release</OutputPath>
   </PropertyGroup>
@@ -22,6 +22,7 @@
     <EmbeddedResource Include="Thumb.png" />
   </ItemGroup>
 
+  
   <ItemGroup>
     <PackageReference Include="MediaBrowser.Common" Version="4.8.5" />
     <PackageReference Include="MediaBrowser.Server.Core" Version="4.8.5" />
@@ -30,5 +31,6 @@
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="Copy $(TargetDir)$(TargetFileName) $(SolutionDir)$(ConfigurationName)\$(TargetFileName) /y&#xD;&#xA;" />
   </Target>
+
 
 </Project>
