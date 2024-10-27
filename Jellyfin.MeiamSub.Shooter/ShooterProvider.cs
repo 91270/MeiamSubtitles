@@ -1,4 +1,7 @@
-﻿using Jellyfin.MeiamSub.Shooter.Model;
+﻿using Jellyfin.Data.Entities.Libraries;
+using Jellyfin.MeiamSub.Shooter.Model;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Subtitles;
 using MediaBrowser.Model.Providers;
@@ -16,6 +19,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using static System.Net.WebRequestMethods;
 
 namespace Jellyfin.MeiamSub.Shooter
 {
@@ -30,9 +34,13 @@ namespace Jellyfin.MeiamSub.Shooter
         public const string SRT = "srt";
 
         private readonly ILogger<ShooterProvider> _logger;
+
         private static readonly HttpClient _httpClient = new HttpClient();
 
-        public int Order => 1;
+        private string apiUrl => "https://www.shooter.cn/api/subapi.php";
+
+        public int Order => 1000;
+
         public string Name => "MeiamSub.Shooter";
 
         /// <summary>
@@ -85,7 +93,7 @@ namespace Jellyfin.MeiamSub.Shooter
 
             _logger.LogInformation($"{Name} Search | FileHash -> { hash }");
 
-            var content = new Dictionary<string, string>
+            var formData = new Dictionary<string, string>
             {
                 { "filehash", hash},
                 { "pathinfo", request.MediaPath},
@@ -93,35 +101,37 @@ namespace Jellyfin.MeiamSub.Shooter
                 { "lang", request.Language ==  "chi" ? "chn" : "eng"}
             };
 
+            var content = new FormUrlEncodedContent(formData);
 
-            HttpRequestMessage requestMessage = new HttpRequestMessage();
+            // 设置请求头
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
 
-            requestMessage.Method = HttpMethod.Post;
-            requestMessage.RequestUri = new Uri($"https://www.shooter.cn/api/subapi.php");
-            requestMessage.Content = new FormUrlEncodedContent(content);
-            requestMessage.Headers.Add("User-Agent", $"{Name}");
-            requestMessage.Headers.Add("Accept-Encoding", $"gzip, deflate, br");
-            requestMessage.Headers.Add("Accept", $"*/*");
+            // 发送 POST 请求
+            var response = await _httpClient.PostAsync(apiUrl, content);
 
-            var response = await _httpClient.SendAsync(requestMessage);
+            _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(response)}");
 
-            _logger.LogInformation($"{Name} Search | Response -> { JsonSerializer.Serialize(response) }");
-
-            if (response.StatusCode == HttpStatusCode.OK && response.Content.Headers.Any(m => m.Value.Contains("application/json; charset=utf-8")))
+            // 处理响应
+            if (response.IsSuccessStatusCode && response.Content.Headers.Any(m => m.Value.Contains("application/json; charset=utf-8")))
             {
-                var subtitleResponse = JsonSerializer.Deserialize<List<SubtitleResponseRoot>>(await response.Content.ReadAsStringAsync());
+                var responseBody = await response.Content.ReadAsStringAsync();
 
-                _logger.LogInformation($"{Name} Search | Response -> { JsonSerializer.Serialize(subtitleResponse) }");
+                _logger.LogInformation($"{Name} Search | ResponseBody -> { responseBody } ");
 
-                if (subtitleResponse != null)
+                var subtitles = JsonSerializer.Deserialize<List<SubtitleResponseRoot>>(responseBody);
+
+                _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(subtitles)}");
+
+                if (subtitles != null)
                 {
-                    var remoteSubtitleInfos = new List<RemoteSubtitleInfo>();
 
-                    foreach (var subFileInfo in subtitleResponse)
+                    var remoteSubtitles = new List<RemoteSubtitleInfo>();
+
+                    foreach (var subFileInfo in subtitles)
                     {
                         foreach (var subFile in subFileInfo.Files)
                         {
-                            remoteSubtitleInfos.Add(new RemoteSubtitleInfo()
+                            remoteSubtitles.Add(new RemoteSubtitleInfo()
                             {
                                 Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
                                 {
@@ -130,24 +140,24 @@ namespace Jellyfin.MeiamSub.Shooter
                                     Language = request.Language,
                                     TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
                                 })),
-                                Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.TwoLetterISOLanguageName} | 射手",
+                                Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {request.TwoLetterISOLanguageName} | 射手",
                                 Author = "Meiam ",
                                 ProviderName = $"{Name}",
                                 Format = subFile.Ext,
-                                Comment = $"Format : { ExtractFormat(subFile.Ext)}",
-                                IsHashMatch = true     
+                                Comment = $"Format : {ExtractFormat(subFile.Ext)}",
+                                IsHashMatch = true
                             });
                         }
                     }
 
-                    _logger.LogInformation($"{Name} Search | Summary -> Get  { remoteSubtitleInfos.Count }  Subtitles");
+                    _logger.LogInformation($"{Name} Search | Summary -> Get  {remoteSubtitles.Count}  Subtitles");
 
-                    return remoteSubtitleInfos;
+                    return remoteSubtitles;
                 }
+
             }
 
             _logger.LogInformation($"{Name} Search | Summary -> Get  0  Subtitles");
-
 
             return Array.Empty<RemoteSubtitleInfo>();
         }
@@ -217,6 +227,7 @@ namespace Jellyfin.MeiamSub.Shooter
         #endregion
 
         #region 内部方法
+
 
         /// <summary>
         /// Base64 加密
@@ -309,6 +320,11 @@ namespace Jellyfin.MeiamSub.Shooter
             fs.Close();
 
             return ret;
+        }
+
+        public Task<ItemUpdateType> FetchAsync(Movie item, MetadataRefreshOptions options, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
         }
         #endregion
     }

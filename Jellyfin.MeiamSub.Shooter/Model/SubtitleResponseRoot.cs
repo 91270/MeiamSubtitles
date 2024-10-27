@@ -7,7 +7,7 @@ namespace Jellyfin.MeiamSub.Shooter.Model
     {
         public string Desc { get; set; }
         public int Delay { get; set; }
-        public SubFileInfo[] Files { get; set; }
+        public List<SubFileInfo> Files { get; set; }
     }
 
     public class SubFileInfo

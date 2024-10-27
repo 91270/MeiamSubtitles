@@ -24,8 +24,8 @@
 
   
   <ItemGroup>
-    <PackageReference Include="MediaBrowser.Common" Version="4.8.5" />
-    <PackageReference Include="MediaBrowser.Server.Core" Version="4.8.5" />
+    <PackageReference Include="MediaBrowser.Common" Version="4.8.10" />
+    <PackageReference Include="MediaBrowser.Server.Core" Version="4.8.10" />
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
