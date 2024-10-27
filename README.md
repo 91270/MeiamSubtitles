@@ -55,6 +55,7 @@ Emby Jellyfin 中文字幕插件 ，支持 迅雷影音、射手网、 精准匹
 首先下载已编译好的插件 [LINK](https://github.com/91270/Emby.MeiamSub/releases)
 
 由于 Jellyfin 自身 [BUG](https://github.com/jellyfin/jellyfin/issues/12434) , 会重复下载字幕 。
+
 建议：媒体库不勾选本插件, 自动扫描缺失字幕时不使用该插件，但不影响手动查找字幕
 
 ### WINDOWS
