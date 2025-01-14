@@ -85,8 +85,7 @@ namespace Jellyfin.MeiamSub.Thunder
             using var options = new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
-                //RequestUri = new Uri($"http://sub.xmp.sandai.net:8000/subxl/{cid}.json"),
-                RequestUri = new Uri($"http://subtitle.kankan.xunlei.com:8000/subxl/{cid}.json"),
+                RequestUri = new Uri($"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?&name={Path.GetFileName(request.MediaPath)}"),
                 Headers =
                     {
                         UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue($"{Name}")) },
@@ -106,30 +105,36 @@ namespace Jellyfin.MeiamSub.Thunder
                 {
                     _logger.LogInformation($"{Name} Search | Response -> { JsonSerializer.Serialize(subtitleResponse) }");
 
-                    var subtitles = subtitleResponse.sublist.Where(m => !string.IsNullOrEmpty(m.sname));
+                    var subtitles = subtitleResponse.Data.Where(m => !string.IsNullOrEmpty(m.Name));
+
+                    var remoteSubtitleInfos = new List<RemoteSubtitleInfo>();
 
                     if (subtitles.Count() > 0)
                     {
-                        _logger.LogInformation($"{Name} Search | Summary -> Get  { subtitles.Count() }  Subtitles");
-
-                        return subtitles.Select(m => new RemoteSubtitleInfo()
+                        foreach (var item in subtitles)
                         {
-                            Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
+                            remoteSubtitleInfos.Add(new RemoteSubtitleInfo()
                             {
-                                Url = m.surl,
-                                Format = ExtractFormat(m.sname),
-                                Language = request.Language,
-                                TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
-                            })),
-                            Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {request.TwoLetterISOLanguageName} | 迅雷",
-                            Author = "Meiam ",
-                            CommunityRating = Convert.ToSingle(m.rate),
-                            ProviderName = $"{Name}",
-                            Format = ExtractFormat(m.sname),
-                            Comment = $"Format : { ExtractFormat(m.sname)}  -  Rate : { m.rate }",
-                            IsHashMatch = true
-                        }).OrderByDescending(m => m.CommunityRating);
+                                Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
+                                {
+                                    Url = item.Url,
+                                    Format = item.Ext,
+                                    Language = request.Language,
+                                    TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
+                                })),
+                                Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
+                                Author = "Meiam ",
+                                ProviderName = $"{Name}",
+                                Format = item.Ext,
+                                Comment = $"Format : {item.Ext}",
+                                IsHashMatch = cid == item.Cid,
+                            });
+                        }
                     }
+
+                    _logger.LogInformation($"{Name} Search | Summary -> Get  {subtitles.Count()}  Subtitles");
+
+                    return remoteSubtitleInfos;
                 }
             }
 

@@ -2,39 +2,28 @@
 
 namespace Jellyfin.MeiamSub.Thunder.Model
 {
-    public class SublistItem
-    {
-        /// <summary>
-        /// 
-        /// </summary>
-        public string scid { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
-        public string sname { get; set; }
-        /// <summary>
-        /// 未知语言
-        /// </summary>
-        public string language { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
-        public string rate { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
-        public string surl { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
-        public int svote { get; set; }
-    }
-
     public class SubtitleResponseRoot
     {
-        /// <summary>
-        /// 
-        /// </summary>
-        public List<SublistItem> sublist { get; set; }
+        public int Code { get; set; }
+        public List<SublistItem> Data { get; set; }
+        public string Result { get; set; }
+    }
+
+    public class SublistItem
+    {
+        public string Gcid { get; set; }
+        public string Cid { get; set; }
+        public string Url { get; set; }
+        public string Ext { get; set; }
+        public string Name { get; set; }
+        public int Duration { get; set; }
+        public string[] Languages { get; set; }
+
+        public string Langs => Languages != null ? string.Join(",", Languages) : string.Empty;
+
+        public int Source { get; set; }
+        public int Score { get; set; }
+        public int FingerprintfScore { get; set; }
+        public string ExtraName { get; set; }
     }
 }

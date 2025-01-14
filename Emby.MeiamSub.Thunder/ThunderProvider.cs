@@ -14,7 +14,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
+using static System.Net.WebRequestMethods;
 
 namespace Emby.MeiamSub.Thunder
 {
@@ -28,11 +28,12 @@ namespace Emby.MeiamSub.Thunder
         public const string SSA = "ssa";
         public const string SRT = "srt";
 
-        private readonly ILogger _logger;
+        protected readonly ILogger _logger;
         private readonly IJsonSerializer _jsonSerializer;
         private readonly IHttpClient _httpClient;
 
         public int Order => 1;
+
         public string Name => "MeiamSub.Thunder";
 
         /// <summary>
@@ -61,7 +62,7 @@ namespace Emby.MeiamSub.Thunder
         /// <returns></returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
-            _logger.Info($"{0} Search | SubtitleSearchRequest -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(request) });
+            _logger.Info("{0} Search | SubtitleSearchRequest -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(request) });
 
             var subtitles = await SearchSubtitlesAsync(request);
 
@@ -85,55 +86,62 @@ namespace Emby.MeiamSub.Thunder
 
             var cid = GetCidByFile(request.MediaPath);
 
-            _logger.Info($"{0} Search | FileHash -> {1}", new object[2] { Name, cid });     
+            _logger.Info("{0} Search | FileHash -> {1}", new object[2] { Name, cid });
 
-            var response = await _httpClient.GetResponse(new HttpRequestOptions
+
+            HttpRequestOptions options = new HttpRequestOptions
             {
-                //Url = $"http://sub.xmp.sandai.net:8000/subxl/{cid}.json",
-                Url = $"http://subtitle.kankan.xunlei.com:8000/subxl/{cid}.json",
+                Url = $"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?&name={Path.GetFileName(request.MediaPath)}",
                 UserAgent = $"{Name}",
                 TimeoutMs = 30000,
                 AcceptHeader = "*/*",
-            });
+            };
+            var response = await _httpClient.GetResponse(options);
 
-            _logger.Info($"{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(response) });
+            _logger.Info("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(response) });
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
                 var subtitleResponse = _jsonSerializer.DeserializeFromStream<SubtitleResponseRoot>(response.Content);
 
-                if (subtitleResponse != null)
+                if (subtitleResponse.Code == 0)
                 {
-                    _logger.Info($"{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(subtitleResponse) });
+                    _logger.Info("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(subtitleResponse) });
 
-                    var subtitles = subtitleResponse.sublist.Where(m => !string.IsNullOrEmpty(m.sname));
+                    var subtitles = subtitleResponse.Data.Where(m => !string.IsNullOrEmpty(m.Name));
+
+                    var remoteSubtitleInfos = new List<RemoteSubtitleInfo>();
 
                     if (subtitles.Count() > 0)
                     {
-                        _logger.Info($"{0} Search | Summary -> Get  {1}  Subtitles", new object[2] { Name, subtitles.Count() });
-
-                        return subtitles.Select(m => new RemoteSubtitleInfo()
+                        foreach (var item in subtitles)
                         {
-                            Id = Base64Encode(_jsonSerializer.SerializeToString(new DownloadSubInfo
+                            remoteSubtitleInfos.Add(new RemoteSubtitleInfo()
                             {
-                                Url = m.surl,
-                                Format = ExtractFormat(m.sname),
-                                Language = request.Language,
-                                IsForced = request.IsForced
-                            })),
-                            Name = $"[MEIAMSUB] { Path.GetFileName(request.MediaPath) } | {m.language} | 迅雷",
-                            Author = "Meiam ",
-                            CommunityRating = Convert.ToSingle(m.rate),
-                            ProviderName = $"{Name}",
-                            Format = ExtractFormat(m.sname),
-                            Comment = $"Format : { ExtractFormat(m.sname)}  -  Rate : { m.rate }",
-                            IsHashMatch = true
-                        }).OrderByDescending(m => m.CommunityRating);
+                                Id = Base64Encode(_jsonSerializer.SerializeToString(new DownloadSubInfo
+                                {
+                                    Url = item.Url,
+                                    Format = item.Ext,
+                                    Language = request.Language,
+                                    IsForced = request.IsForced
+                                })),
+                                Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
+                                Author = "Meiam ",
+                                ProviderName = $"{Name}",
+                                Format = item.Ext,
+                                Comment = $"Format : {item.Ext}",
+                                IsHashMatch = cid == item.Cid,
+                            });
+                        }
                     }
+
+                    _logger.Info("{0} Search | Summary -> Get  {1}  Subtitles", new object[2] { Name, remoteSubtitleInfos.Count });
+
+                    return remoteSubtitleInfos;
                 }
             }
 
-            _logger.Info($"{0} Search | Summary -> Get  0  Subtitles", new object[1] { Name });
+            _logger.Info("{0} Search | Summary -> Get  0  Subtitles", new object[1] { Name });
 
 
             return Array.Empty<RemoteSubtitleInfo>();
@@ -149,7 +157,7 @@ namespace Emby.MeiamSub.Thunder
         /// <returns></returns>
         public async Task<SubtitleResponse> GetSubtitles(string id, CancellationToken cancellationToken)
         {
-            _logger.Info($"{0} DownloadSub | Request -> {1}", new object[2] { Name, id });  
+            _logger.Info("{0} DownloadSub | Request -> {1}", new object[2] { Name, id });  
 
             return await DownloadSubAsync(id);
         }
@@ -168,7 +176,7 @@ namespace Emby.MeiamSub.Thunder
                 return new SubtitleResponse();
             }
 
-            _logger.Info($"{0} DownloadSub | Url -> {1}  |  Format -> {2} |  Language -> {3} ",
+            _logger.Info("{0} DownloadSub | Url -> {1}  |  Format -> {2} |  Language -> {3} ",
                 new object[4] { Name, downloadSub.Url, downloadSub.Format, downloadSub.Language });
 
             var response = await _httpClient.GetResponse(new HttpRequestOptions
@@ -179,7 +187,7 @@ namespace Emby.MeiamSub.Thunder
                 AcceptHeader = "*/*",
             });
 
-            _logger.Info($"{0} DownloadSub | Response -> {1}", new object[2] { Name, response.StatusCode });
+            _logger.Info("{0} DownloadSub | Response -> {1}", new object[2] { Name, response.StatusCode });
 
             if (response.StatusCode == HttpStatusCode.OK)
             {

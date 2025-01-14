@@ -39,7 +39,7 @@ namespace Jellyfin.MeiamSub.Shooter
 
         private string apiUrl => "https://www.shooter.cn/api/subapi.php";
 
-        public int Order => 1000;
+        public int Order => 1;
 
         public string Name => "MeiamSub.Shooter";
 

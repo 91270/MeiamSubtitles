@@ -8,14 +8,12 @@ using MediaBrowser.Model.Serialization;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Emby.MeiamSub.Shooter
 {

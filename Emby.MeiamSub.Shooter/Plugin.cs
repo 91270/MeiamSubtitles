@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Common.Plugins;
+﻿using MediaBrowser.Common.Configuration;
+using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Drawing;
 using System;
 using System.IO;
@@ -11,6 +12,12 @@ namespace Emby.MeiamSub.Shooter
     /// </summary>
     public class Plugin : BasePlugin, IHasThumbImage
     {
+
+        public Plugin(IApplicationPaths applicationPaths)
+        {
+            Instance = this;
+        }
+
         /// <summary>
         /// 插件ID
         /// </summary>
@@ -30,6 +37,9 @@ namespace Emby.MeiamSub.Shooter
         /// 缩略图格式化类型
         /// </summary>
         public ImageFormat ThumbImageFormat => ImageFormat.Gif;
+
+
+        public static Plugin Instance { get; private set; }
 
         /// <summary>
         /// 缩略图资源文件
