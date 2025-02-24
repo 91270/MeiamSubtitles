@@ -30,6 +30,10 @@ namespace Jellyfin.MeiamSub.Thunder
 
         private readonly ILogger<ThunderProvider> _logger;
         private static readonly HttpClient _httpClient = new HttpClient();
+        private static readonly JsonSerializerOptions _deserializeOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+        };
 
         public int Order => 1;
         public string Name => "MeiamSub.Thunder";
@@ -85,7 +89,7 @@ namespace Jellyfin.MeiamSub.Thunder
             using var options = new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
-                RequestUri = new Uri($"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?&name={Path.GetFileName(request.MediaPath)}"),
+                RequestUri = new Uri($"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?name={Path.GetFileName(request.MediaPath)}"),
                 Headers =
                     {
                         UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue($"{Name}")) },
@@ -99,7 +103,7 @@ namespace Jellyfin.MeiamSub.Thunder
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                var subtitleResponse = JsonSerializer.Deserialize<SubtitleResponseRoot>(await response.Content.ReadAsStringAsync());
+                var subtitleResponse = JsonSerializer.Deserialize<SubtitleResponseRoot>(await response.Content.ReadAsStringAsync(), _deserializeOptions);
 
                 if (subtitleResponse != null)
                 {
