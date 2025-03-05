@@ -91,7 +91,7 @@ namespace Emby.MeiamSub.Thunder
 
             HttpRequestOptions options = new HttpRequestOptions
             {
-                Url = $"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?&name={Path.GetFileName(request.MediaPath)}",
+                Url = $"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?name={Path.GetFileName(request.MediaPath)}",
                 UserAgent = $"{Name}",
                 TimeoutMs = 30000,
                 AcceptHeader = "*/*",
