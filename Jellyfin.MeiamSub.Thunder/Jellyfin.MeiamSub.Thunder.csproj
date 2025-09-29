@@ -5,8 +5,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <ApplicationIcon />
     <StartupObject />
-    <Version>1.0.11</Version>
-    <AssemblyVersion>1.0.11.0</AssemblyVersion>
+    <Version>1.0.12.0</Version>
+    <AssemblyVersion>1.0.12.0</AssemblyVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
