@@ -27,7 +27,7 @@ Emby Jellyfin 中文字幕插件 ，支持 迅雷影音、射手网、 精准匹
 
 循环优惠码：BWHCCNCXVV（6.77%）
 
-[直达通道(传家宝套餐)](https://bwh88.net/aff.php?aff=117&pid=147)
+[直达通道(传家宝套餐)](https://bwh88.net/aff.php?aff=117&pid=87)
 
 &nbsp;
 
