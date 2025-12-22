@@ -151,21 +151,20 @@ namespace Jellyfin.MeiamSub.Shooter
                             {
                                 remoteSubtitles.Add(new RemoteSubtitleInfo()
                                 {
-                                    Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
-                                    {
-                                        Url = subFile.Link,
-                                        Format = subFile.Ext,
-                                        Language = language,
-                                        TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
-                                    })),
-                                    Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {request.TwoLetterISOLanguageName} | 射手",
-                                    Author = "Meiam ",
-                                    ProviderName = $"{Name}",
+                                Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
+                                {
+                                    Url = subFile.Link,
                                     Format = subFile.Ext,
-                                    Comment = $"Format : {ExtractFormat(subFile.Ext)}",
-                                    IsHashMatch = true
-                                });
-                            }
+                                    Language = request.Language,
+                                    TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
+                                })),
+                                Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {request.TwoLetterISOLanguageName} | 射手",
+                                Author = "Meiam ",
+                                ProviderName = $"{Name}",
+                                Format = subFile.Ext,
+                                Comment = $"Format : {ExtractFormat(subFile.Ext)}",
+                                IsHashMatch = true
+                            });                            }
                         }
 
                         _logger.LogInformation($"{Name} Search | Summary -> Get  {remoteSubtitles.Count}  Subtitles");

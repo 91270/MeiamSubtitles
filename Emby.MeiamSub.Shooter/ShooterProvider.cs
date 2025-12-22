@@ -141,21 +141,21 @@ namespace Emby.MeiamSub.Shooter
                             {
                                 remoteSubtitles.Add(new RemoteSubtitleInfo()
                                 {
-                                    Id = Base64Encode(_jsonSerializer.SerializeToString(new DownloadSubInfo
-                                    {
-                                        Url = subFile.Link,
-                                        Format = subFile.Ext,
-                                        Language = language,
-                                        IsForced = request.IsForced
-                                    })),
-                                    Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {language} | 射手",
-                                    Author = "Meiam ",
-                                    ProviderName = $"{Name}",
-                                    Format = subFile.Ext,
-                                    Comment = $"Format : {ExtractFormat(subFile.Ext)}",
-                                    IsHashMatch = true
-                                });
-                            }
+                                                                    Id = Base64Encode(_jsonSerializer.SerializeToString(new DownloadSubInfo
+                                                                    {
+                                                                        Url = subFile.Link,
+                                                                        Format = subFile.Ext,
+                                                                        Language = request.Language,
+                                                                        IsForced = request.IsForced
+                                                                    })),
+                                                                    Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {language} | 射手",
+                                                                    Language = request.Language,
+                                                                    Author = "Meiam ",
+                                                                    ProviderName = $"{Name}",
+                                                                    Format = subFile.Ext,
+                                                                    Comment = $"Format : {ExtractFormat(subFile.Ext)}",
+                                                                    IsHashMatch = true
+                                                                });                            }
                         }
                         _logger.Info("{0} Search | Summary -> Get  {1}  Subtitles", new object[2] { Name, remoteSubtitles.Count });
 

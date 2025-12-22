@@ -134,21 +134,20 @@ using MediaBrowser.Controller.Providers;
 ﻿                            {
 ﻿                                remoteSubtitles.Add(new RemoteSubtitleInfo()
 ﻿                                {
-﻿                                    Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
-﻿                                    {
-﻿                                        Url = item.Url,
-﻿                                        Format = item.Ext,
-﻿                                        Language = language,
-﻿                                        TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
-﻿                                    })),
-﻿                                    Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
-﻿                                    Author = "Meiam ",
-﻿                                    ProviderName = $"{Name}",
-﻿                                    Format = item.Ext,
-﻿                                    Comment = $"Format : {item.Ext}",
-﻿                                    IsHashMatch = cid == item.Cid,
-﻿                                });
-﻿                            }
+﻿                                                                                                                                                                    Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
+﻿                                                                                                                                                                    {
+﻿                                                                                                                                                                        Url = item.Url,
+﻿                                                                                                                                                                        Format = item.Ext,
+﻿                                                                                                                                                                        Language = request.Language,
+﻿                                                                                                                                                                        TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
+﻿                                                                                                                                                                    })),
+﻿                                                                                                                                                                    Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
+﻿                                                                                                                                                                    Author = "Meiam ",
+﻿                                                                                                                                                                    ProviderName = $"{Name}",
+﻿                                                                                                                                                                    Format = item.Ext,
+﻿                                                                                                                                                                    Comment = $"Format : {item.Ext}",
+﻿                                                                                                                                                                    IsHashMatch = cid == item.Cid,
+﻿                                                                                                                                                                });﻿                            }
 ﻿                        }
 ﻿
 ﻿                        _logger.LogInformation($"{Name} Search | Summary -> Get  {subtitles.Count()}  Subtitles");
