@@ -2,9 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <ApplicationIcon />
-    <StartupObject />
+    <TargetFramework>net9.0</TargetFramework>
     <Version>1.0.12.0</Version>
     <AssemblyVersion>1.0.12.0</AssemblyVersion>
   </PropertyGroup>
@@ -14,7 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Jellyfin.Controller" Version="10.10.3" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.11.5" />
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">

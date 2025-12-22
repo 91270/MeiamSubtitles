@@ -1,5 +1,4 @@
-﻿using Jellyfin.Data.Entities.Libraries;
-using Jellyfin.MeiamSub.Shooter.Model;
+﻿using Jellyfin.MeiamSub.Shooter.Model;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
@@ -24,7 +23,10 @@ using static System.Net.WebRequestMethods;
 namespace Jellyfin.MeiamSub.Shooter
 {
     /// <summary>
-    /// 迅雷字幕组件
+    /// 射手网字幕提供程序
+    /// 负责与射手网 API 进行交互，通过文件哈希匹配并下载字幕。
+    /// <para>修改人: Meiam</para>
+    /// <para>修改时间: 2025-12-22</para>
     /// </summary>
     public class ShooterProvider : ISubtitleProvider, IHasOrder
     {
@@ -37,7 +39,7 @@ namespace Jellyfin.MeiamSub.Shooter
 
         private static readonly HttpClient _httpClient = new HttpClient();
 
-        private string apiUrl => "https://www.shooter.cn/api/subapi.php";
+        private const string ApiUrl = "https://www.shooter.cn/api/subapi.php";
 
         public int Order => 1;
 
@@ -46,7 +48,7 @@ namespace Jellyfin.MeiamSub.Shooter
         /// <summary>
         /// 支持电影、剧集
         /// </summary>
-        public IEnumerable<VideoContentType> SupportedMediaTypes => new List<VideoContentType>() { VideoContentType.Movie, VideoContentType.Episode };
+        public IEnumerable<VideoContentType> SupportedMediaTypes => new[] { VideoContentType.Movie, VideoContentType.Episode };
         #endregion
 
         #region 构造函数
@@ -61,11 +63,12 @@ namespace Jellyfin.MeiamSub.Shooter
         #region 查询字幕
 
         /// <summary>
-        /// 查询请求
+        /// 搜索字幕 (ISubtitleProvider 接口实现)
+        /// 根据媒体信息请求字幕列表。
         /// </summary>
-        /// <param name="request"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
+        /// <param name="request">包含媒体路径、语言等信息的搜索请求对象</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <returns>远程字幕信息列表</returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
             _logger.LogInformation($"{Name} Search | SubtitleSearchRequest -> { JsonSerializer.Serialize(request) }");
@@ -82,79 +85,90 @@ namespace Jellyfin.MeiamSub.Shooter
         /// <returns></returns>
         private async Task<IEnumerable<RemoteSubtitleInfo>> SearchSubtitlesAsync(SubtitleSearchRequest request)
         {
-            if (request.Language != "chi" && request.Language != "eng")
+            // 修改人: Meiam
+            // 修改时间: 2025-12-22
+            // 备注: 增加异常处理
+
+            try
             {
-                return Array.Empty<RemoteSubtitleInfo>();
-            }
-
-            FileInfo fileInfo = new(request.MediaPath);
-
-            var hash = ComputeFileHash(fileInfo);
-
-            _logger.LogInformation($"{Name} Search | FileHash -> { hash }");
-
-            var formData = new Dictionary<string, string>
-            {
-                { "filehash", hash},
-                { "pathinfo", request.MediaPath},
-                { "format", "json"},
-                { "lang", request.Language ==  "chi" ? "chn" : "eng"}
-            };
-
-            var content = new FormUrlEncodedContent(formData);
-
-            // 设置请求头
-            content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
-
-            // 发送 POST 请求
-            var response = await _httpClient.PostAsync(apiUrl, content);
-
-            _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(response)}");
-
-            // 处理响应
-            if (response.IsSuccessStatusCode && response.Content.Headers.Any(m => m.Value.Contains("application/json; charset=utf-8")))
-            {
-                var responseBody = await response.Content.ReadAsStringAsync();
-
-                _logger.LogInformation($"{Name} Search | ResponseBody -> { responseBody } ");
-
-                var subtitles = JsonSerializer.Deserialize<List<SubtitleResponseRoot>>(responseBody);
-
-                _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(subtitles)}");
-
-                if (subtitles != null)
+                if (request.Language != "chi" && request.Language != "eng")
                 {
-
-                    var remoteSubtitles = new List<RemoteSubtitleInfo>();
-
-                    foreach (var subFileInfo in subtitles)
-                    {
-                        foreach (var subFile in subFileInfo.Files)
-                        {
-                            remoteSubtitles.Add(new RemoteSubtitleInfo()
-                            {
-                                Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
-                                {
-                                    Url = subFile.Link,
-                                    Format = subFile.Ext,
-                                    Language = request.Language,
-                                    TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
-                                })),
-                                Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {request.TwoLetterISOLanguageName} | 射手",
-                                Author = "Meiam ",
-                                ProviderName = $"{Name}",
-                                Format = subFile.Ext,
-                                Comment = $"Format : {ExtractFormat(subFile.Ext)}",
-                                IsHashMatch = true
-                            });
-                        }
-                    }
-
-                    _logger.LogInformation($"{Name} Search | Summary -> Get  {remoteSubtitles.Count}  Subtitles");
-
-                    return remoteSubtitles;
+                    return Array.Empty<RemoteSubtitleInfo>();
                 }
 
+                FileInfo fileInfo = new(request.MediaPath);
+
+                var hash = await ComputeFileHashAsync(fileInfo);
+
+                _logger.LogInformation($"{Name} Search | FileHash -> {hash}");
+
+                var formData = new Dictionary<string, string>
+                {
+                    { "filehash", hash},
+                    { "pathinfo", request.MediaPath},
+                    { "format", "json"},
+                    { "lang", request.Language ==  "chi" ? "chn" : "eng"}
+                };
+
+                var content = new FormUrlEncodedContent(formData);
+
+                // 设置请求头
+                content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
+
+                // 发送 POST 请求
+                var response = await _httpClient.PostAsync(ApiUrl, content);
+
+                _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(response)}");
+
+                // 处理响应
+                if (response.IsSuccessStatusCode && response.Content.Headers.Any(m => m.Value.Contains("application/json; charset=utf-8")))
+                {
+                    var responseBody = await response.Content.ReadAsStringAsync();
+
+                    _logger.LogInformation($"{Name} Search | ResponseBody -> {responseBody} ");
+
+                    var subtitles = JsonSerializer.Deserialize<List<SubtitleResponseRoot>>(responseBody);
+
+                    _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(subtitles)}");
+
+                    if (subtitles != null)
+                    {
+
+                        var remoteSubtitles = new List<RemoteSubtitleInfo>();
+
+                        foreach (var subFileInfo in subtitles)
+                        {
+                            foreach (var subFile in subFileInfo.Files)
+                            {
+                                remoteSubtitles.Add(new RemoteSubtitleInfo()
+                                {
+                                    Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
+                                    {
+                                        Url = subFile.Link,
+                                        Format = subFile.Ext,
+                                        Language = request.Language,
+                                        TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
+                                    })),
+                                    Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {request.TwoLetterISOLanguageName} | 射手",
+                                    Author = "Meiam ",
+                                    ProviderName = $"{Name}",
+                                    Format = subFile.Ext,
+                                    Comment = $"Format : {ExtractFormat(subFile.Ext)}",
+                                    IsHashMatch = true
+                                });
+                            }
+                        }
+
+                        _logger.LogInformation($"{Name} Search | Summary -> Get  {remoteSubtitles.Count}  Subtitles");
+
+                        return remoteSubtitles;
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "{0} Search | Error -> {1}", Name, ex.Message);
             }
 
             _logger.LogInformation($"{Name} Search | Summary -> Get  0  Subtitles");
@@ -165,11 +179,12 @@ namespace Jellyfin.MeiamSub.Shooter
 
         #region 下载字幕
         /// <summary>
-        /// 下载请求
+        /// 获取字幕内容 (ISubtitleProvider 接口实现)
+        /// 根据字幕 ID 下载具体的字幕文件流。
         /// </summary>
-        /// <param name="id"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
+        /// <param name="id">字幕唯一标识符 (Base64 编码的 JSON 数据)</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <returns>包含字幕流的响应对象</returns>
         public async Task<SubtitleResponse> GetSubtitles(string id, CancellationToken cancellationToken)
         {
             _logger.LogInformation($"{Name} DownloadSub | Request -> {id}");
@@ -184,41 +199,52 @@ namespace Jellyfin.MeiamSub.Shooter
         /// <returns></returns>
         private async Task<SubtitleResponse> DownloadSubAsync(string info)
         {
-            var downloadSub = JsonSerializer.Deserialize<DownloadSubInfo>(Base64Decode(info));
+            // 修改人: Meiam
+            // 修改时间: 2025-12-22
+            // 备注: 增加异常处理
 
-            if (downloadSub == null)
+            try
             {
-                return new SubtitleResponse();
-            }
+                var downloadSub = JsonSerializer.Deserialize<DownloadSubInfo>(Base64Decode(info));
 
-            _logger.LogInformation($"{Name} DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
+                if (downloadSub == null)
+                {
+                    return new SubtitleResponse();
+                }
 
-            using var options = new HttpRequestMessage
-            {
-                Method = HttpMethod.Get,
-                RequestUri = new Uri(downloadSub.Url),
-                Headers =
+                _logger.LogInformation($"{Name} DownloadSub | Url -> {downloadSub.Url}  |  Format -> {downloadSub.Format} |  Language -> {downloadSub.Language} ");
+
+                using var options = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = new Uri(downloadSub.Url),
+                    Headers =
                     {
                         UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue($"{Name}")) },
                         Accept = { new MediaTypeWithQualityHeaderValue("*/*") }
                     }
-            };
-
-            var response = await _httpClient.SendAsync(options);
-
-            _logger.LogInformation($"{Name} DownloadSub | Response -> { response.StatusCode }");
-
-            if (response.StatusCode == HttpStatusCode.OK)
-            {
-                var stream = await response.Content.ReadAsStreamAsync();
-
-                return new SubtitleResponse()
-                {
-                    Language = downloadSub.Language,
-                    IsForced = false,
-                    Format = downloadSub.Format,
-                    Stream = stream,
                 };
+
+                var response = await _httpClient.SendAsync(options);
+
+                _logger.LogInformation($"{Name} DownloadSub | Response -> {response.StatusCode}");
+
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    var stream = await response.Content.ReadAsStreamAsync();
+
+                    return new SubtitleResponse()
+                    {
+                        Language = downloadSub.Language,
+                        IsForced = false,
+                        Format = downloadSub.Format,
+                        Stream = stream,
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "{0} DownloadSub | Error -> {1}", Name, ex.Message);
             }
 
             return new SubtitleResponse();
@@ -257,27 +283,33 @@ namespace Jellyfin.MeiamSub.Shooter
         /// <returns></returns>
         protected string ExtractFormat(string text)
         {
-
-            string result = null;
-
-            if (text != null)
+            if (string.IsNullOrEmpty(text))
             {
-                text = text.ToLower();
-                if (text.Contains(ASS)) result = ASS;
-                else if (text.Contains(SSA)) result = SSA;
-                else if (text.Contains(SRT)) result = SRT;
-                else result = null;
+                return null;
             }
-            return result;
+
+            text = text.ToLower();
+            if (text.Contains(ASS)) return ASS;
+            if (text.Contains(SSA)) return SSA;
+            if (text.Contains(SRT)) return SRT;
+
+            return null;
         }
 
         /// <summary>
-        /// 获取文件 Hash (射手)
+        /// 异步计算文件 Hash (射手网专用算法)
+        /// <para>修改人: Meiam</para>
+        /// <para>修改时间: 2025-12-22</para>
+        /// <para>备注: 采用异步 I/O 读取文件特定位置的 4KB 数据块进行 MD5 计算。</para>
         /// </summary>
-        /// <param name="filePath"></param>
-        /// <returns></returns>
-        public static string ComputeFileHash(FileInfo fileInfo)
+        /// <param name="fileInfo">文件信息对象</param>
+        /// <returns>计算得到的文件 Hash 字符串，如果文件过小或不存在则返回空字符串</returns>
+        public static async Task<string> ComputeFileHashAsync(FileInfo fileInfo)
         {
+            // 修改人: Meiam
+            // 修改时间: 2025-12-22
+            // 备注: 改造为异步方法，优化 I/O 性能并增加 using 语句释放资源
+
             string ret = "";
 
             if (!fileInfo.Exists || fileInfo.Length < 8 * 1024)
@@ -285,47 +317,44 @@ namespace Jellyfin.MeiamSub.Shooter
                 return ret;
             }
 
-            FileStream fs = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read);
-
-            long[] offset = new long[4];
-            offset[3] = fileInfo.Length - 8 * 1024;
-            offset[2] = fileInfo.Length / 3;
-            offset[1] = fileInfo.Length / 3 * 2;
-            offset[0] = 4 * 1024;
-
-            byte[] bBuf = new byte[1024 * 4];
-
-            for (int i = 0; i < 4; ++i)
+            using (FileStream fs = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
             {
-                fs.Seek(offset[i], 0);
-                fs.Read(bBuf, 0, 4 * 1024);
+                long[] offset = new long[4];
+                offset[3] = fileInfo.Length - 8 * 1024;
+                offset[2] = fileInfo.Length / 3;
+                offset[1] = fileInfo.Length / 3 * 2;
+                offset[0] = 4 * 1024;
 
-                MD5 md5Hash = MD5.Create();
-                byte[] data = md5Hash.ComputeHash(bBuf);
-                StringBuilder sBuilder = new StringBuilder();
+                byte[] bBuf = new byte[1024 * 4];
 
-                for (int j = 0; j < data.Length; j++)
+                for (int i = 0; i < 4; ++i)
                 {
-                    sBuilder.Append(data[j].ToString("x2"));
-                }
+                    fs.Seek(offset[i], SeekOrigin.Begin);
+                    await fs.ReadExactlyAsync(bBuf, 0, 4 * 1024);
 
-                if (!string.IsNullOrEmpty(ret))
-                {
-                    ret += ";";
-                }
+                    using (MD5 md5Hash = MD5.Create())
+                    {
+                        byte[] data = md5Hash.ComputeHash(bBuf);
+                        StringBuilder sBuilder = new StringBuilder();
 
-                ret += sBuilder.ToString();
+                        for (int j = 0; j < data.Length; j++)
+                        {
+                            sBuilder.Append(data[j].ToString("x2"));
+                        }
+
+                        if (!string.IsNullOrEmpty(ret))
+                        {
+                            ret += ";";
+                        }
+
+                        ret += sBuilder.ToString();
+                    }
+                }
             }
-
-            fs.Close();
 
             return ret;
         }
 
-        public Task<ItemUpdateType> FetchAsync(Movie item, MetadataRefreshOptions options, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
         #endregion
     }
 }

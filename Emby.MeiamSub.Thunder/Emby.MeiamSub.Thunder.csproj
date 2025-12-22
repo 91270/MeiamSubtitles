@@ -24,8 +24,8 @@
 
   
   <ItemGroup>
-    <PackageReference Include="MediaBrowser.Common" Version="4.8.10" />
-    <PackageReference Include="MediaBrowser.Server.Core" Version="4.8.10" />
+    <PackageReference Include="MediaBrowser.Common" Version="4.9.1.90" />
+    <PackageReference Include="MediaBrowser.Server.Core" Version="4.9.1.90" />
   </ItemGroup>
 
   

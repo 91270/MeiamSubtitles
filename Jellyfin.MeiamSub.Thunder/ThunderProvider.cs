@@ -19,7 +19,10 @@ using System.Threading.Tasks;
 namespace Jellyfin.MeiamSub.Thunder
 {
     /// <summary>
-    /// 迅雷字幕组件
+    /// 迅雷看看字幕提供程序
+    /// 负责与迅雷 API 进行交互，通过 CID (Content ID) 匹配并下载字幕。
+    /// <para>修改人: Meiam</para>
+    /// <para>修改时间: 2025-12-22</para>
     /// </summary>
     public class ThunderProvider : ISubtitleProvider, IHasOrder
     {
@@ -41,7 +44,7 @@ namespace Jellyfin.MeiamSub.Thunder
         /// <summary>
         /// 支持电影、剧集
         /// </summary>
-        public IEnumerable<VideoContentType> SupportedMediaTypes => new List<VideoContentType>() { VideoContentType.Movie, VideoContentType.Episode };
+        public IEnumerable<VideoContentType> SupportedMediaTypes => new[] { VideoContentType.Movie, VideoContentType.Episode };
         #endregion
 
         #region 构造函数
@@ -56,11 +59,12 @@ namespace Jellyfin.MeiamSub.Thunder
         #region 查询字幕
 
         /// <summary>
-        /// 查询请求
+        /// 搜索字幕 (ISubtitleProvider 接口实现)
+        /// 根据媒体信息请求字幕列表。
         /// </summary>
-        /// <param name="request"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
+        /// <param name="request">包含媒体路径、语言等信息的搜索请求对象</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <returns>远程字幕信息列表</returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
             _logger.LogInformation($"{Name} Search | SubtitleSearchRequest -> { JsonSerializer.Serialize(request) }");
@@ -77,69 +81,80 @@ namespace Jellyfin.MeiamSub.Thunder
         /// <returns></returns>
         private async Task<IEnumerable<RemoteSubtitleInfo>> SearchSubtitlesAsync(SubtitleSearchRequest request)
         {
-            if (request.Language != "chi")
+            // 修改人: Meiam
+            // 修改时间: 2025-12-22
+            // 备注: 增加异常处理
+
+            try
             {
-                return Array.Empty<RemoteSubtitleInfo>();
-            }
+                if (request.Language != "chi")
+                {
+                    return Array.Empty<RemoteSubtitleInfo>();
+                }
 
-            var cid = GetCidByFile(request.MediaPath);
+                var cid = await GetCidByFileAsync(request.MediaPath);
 
-            _logger.LogInformation($"{Name} Search | FileHash -> { cid }");
+                _logger.LogInformation($"{Name} Search | FileHash -> {cid}");
 
-            using var options = new HttpRequestMessage
-            {
-                Method = HttpMethod.Get,
-                RequestUri = new Uri($"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?name={Path.GetFileName(request.MediaPath)}"),
-                Headers =
+                using var options = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = new Uri($"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?name={Path.GetFileName(request.MediaPath)}"),
+                    Headers =
                     {
                         UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue($"{Name}")) },
                         Accept = { new MediaTypeWithQualityHeaderValue("*/*") },
                     }
-            };
+                };
 
-            var response = await _httpClient.SendAsync(options);
+                var response = await _httpClient.SendAsync(options);
 
-            _logger.LogInformation($"{Name} Search | Response -> { JsonSerializer.Serialize(response) }");
+                _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(response)}");
 
-            if (response.StatusCode == HttpStatusCode.OK)
-            {
-                var subtitleResponse = JsonSerializer.Deserialize<SubtitleResponseRoot>(await response.Content.ReadAsStringAsync(), _deserializeOptions);
-
-                if (subtitleResponse != null)
+                if (response.StatusCode == HttpStatusCode.OK)
                 {
-                    _logger.LogInformation($"{Name} Search | Response -> { JsonSerializer.Serialize(subtitleResponse) }");
+                    var subtitleResponse = JsonSerializer.Deserialize<SubtitleResponseRoot>(await response.Content.ReadAsStringAsync(), _deserializeOptions);
 
-                    var subtitles = subtitleResponse.Data.Where(m => !string.IsNullOrEmpty(m.Name));
-
-                    var remoteSubtitleInfos = new List<RemoteSubtitleInfo>();
-
-                    if (subtitles.Count() > 0)
+                    if (subtitleResponse != null)
                     {
-                        foreach (var item in subtitles)
+                        _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(subtitleResponse)}");
+
+                        var subtitles = subtitleResponse.Data.Where(m => !string.IsNullOrEmpty(m.Name));
+
+                        var remoteSubtitles = new List<RemoteSubtitleInfo>();
+
+                        if (subtitles.Count() > 0)
                         {
-                            remoteSubtitleInfos.Add(new RemoteSubtitleInfo()
+                            foreach (var item in subtitles)
                             {
-                                Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
+                                remoteSubtitles.Add(new RemoteSubtitleInfo()
                                 {
-                                    Url = item.Url,
+                                    Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
+                                    {
+                                        Url = item.Url,
+                                        Format = item.Ext,
+                                        Language = request.Language,
+                                        TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
+                                    })),
+                                    Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
+                                    Author = "Meiam ",
+                                    ProviderName = $"{Name}",
                                     Format = item.Ext,
-                                    Language = request.Language,
-                                    TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
-                                })),
-                                Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
-                                Author = "Meiam ",
-                                ProviderName = $"{Name}",
-                                Format = item.Ext,
-                                Comment = $"Format : {item.Ext}",
-                                IsHashMatch = cid == item.Cid,
-                            });
+                                    Comment = $"Format : {item.Ext}",
+                                    IsHashMatch = cid == item.Cid,
+                                });
+                            }
                         }
+
+                        _logger.LogInformation($"{Name} Search | Summary -> Get  {subtitles.Count()}  Subtitles");
+
+                        return remoteSubtitles;
                     }
-
-                    _logger.LogInformation($"{Name} Search | Summary -> Get  {subtitles.Count()}  Subtitles");
-
-                    return remoteSubtitleInfos;
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "{0} Search | Error -> {1}", Name, ex.Message);
             }
 
             _logger.LogInformation($"{Name} Search | Summary -> Get  0  Subtitles");
@@ -150,11 +165,12 @@ namespace Jellyfin.MeiamSub.Thunder
 
         #region 下载字幕
         /// <summary>
-        /// 下载请求
+        /// 获取字幕内容 (ISubtitleProvider 接口实现)
+        /// 根据字幕 ID 下载具体的字幕文件流。
         /// </summary>
-        /// <param name="id"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
+        /// <param name="id">字幕唯一标识符 (Base64 编码的 JSON 数据)</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <returns>包含字幕流的响应对象</returns>
         public async Task<SubtitleResponse> GetSubtitles(string id, CancellationToken cancellationToken)
         {
             _logger.LogInformation($"{Name} DownloadSub | Request -> {id}");
@@ -169,41 +185,52 @@ namespace Jellyfin.MeiamSub.Thunder
         /// <returns></returns>
         private async Task<SubtitleResponse> DownloadSubAsync(string info)
         {
-            var downloadSub = JsonSerializer.Deserialize<DownloadSubInfo>(Base64Decode(info));
+            // 修改人: Meiam
+            // 修改时间: 2025-12-22
+            // 备注: 增加异常处理
 
-            if (downloadSub == null)
+            try
             {
-                return new SubtitleResponse();
-            }
+                var downloadSub = JsonSerializer.Deserialize<DownloadSubInfo>(Base64Decode(info));
 
-            _logger.LogInformation($"{Name} DownloadSub | Url -> { downloadSub.Url }  |  Format -> { downloadSub.Format } |  Language -> { downloadSub.Language } ");
+                if (downloadSub == null)
+                {
+                    return new SubtitleResponse();
+                }
 
-            using var options = new HttpRequestMessage
-            {
-                Method = HttpMethod.Get,
-                RequestUri = new Uri(downloadSub.Url),
-                Headers =
+                _logger.LogInformation($"{Name} DownloadSub | Url -> {downloadSub.Url}  |  Format -> {downloadSub.Format} |  Language -> {downloadSub.Language} ");
+
+                using var options = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = new Uri(downloadSub.Url),
+                    Headers =
                     {
                         UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue($"{Name}")) },
                         Accept = { new MediaTypeWithQualityHeaderValue("*/*") }
                     }
-            };
-
-            var response = await _httpClient.SendAsync(options);
-
-            _logger.LogInformation($"{Name} DownloadSub | Response -> { response.StatusCode }");
-
-            if (response.StatusCode == HttpStatusCode.OK)
-            {
-                var stream = await response.Content.ReadAsStreamAsync();
-
-                return new SubtitleResponse()
-                {
-                    Language = downloadSub.Language,
-                    IsForced = false,
-                    Format = downloadSub.Format,
-                    Stream = stream,
                 };
+
+                var response = await _httpClient.SendAsync(options);
+
+                _logger.LogInformation($"{Name} DownloadSub | Response -> {response.StatusCode}");
+
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    var stream = await response.Content.ReadAsStreamAsync();
+
+                    return new SubtitleResponse()
+                    {
+                        Language = downloadSub.Language,
+                        IsForced = false,
+                        Format = downloadSub.Format,
+                        Stream = stream,
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "{0} DownloadSub | Error -> {1}", Name, ex.Message);
             }
 
             return new SubtitleResponse();
@@ -241,53 +268,62 @@ namespace Jellyfin.MeiamSub.Thunder
         /// <returns></returns>
         protected string ExtractFormat(string text)
         {
-
-            string result = null;
-
-            if (text != null)
+            if (string.IsNullOrEmpty(text))
             {
-                text = text.ToLower();
-                if (text.Contains(ASS)) result = ASS;
-                else if (text.Contains(SSA)) result = SSA;
-                else if (text.Contains(SRT)) result = SRT;
-                else result = null;
+                return null;
             }
-            return result;
+
+            text = text.ToLower();
+            if (text.Contains(ASS)) return ASS;
+            if (text.Contains(SSA)) return SSA;
+            if (text.Contains(SRT)) return SRT;
+
+            return null;
         }
 
         /// <summary>
-        /// 获取文件 CID (迅雷)
+        /// 异步计算文件 CID (迅雷专用算法)
+        /// <para>修改人: Meiam</para>
+        /// <para>修改时间: 2025-12-22</para>
+        /// <para>备注: 采用异步 I/O 读取文件特定位置的数据块进行 SHA1 计算。</para>
         /// </summary>
-        /// <param name="filePath"></param>
-        /// <returns></returns>
-        private string GetCidByFile(string filePath)
+        /// <param name="filePath">文件路径</param>
+        /// <returns>计算得到的 CID 字符串</returns>
+        private async Task<string> GetCidByFileAsync(string filePath)
         {
-            var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-            var reader = new BinaryReader(stream);
-            var fileSize = new FileInfo(filePath).Length;
-            var sha1 = SHA1.Create();
-            var buffer = new byte[0xf000];
-            if (fileSize < 0xf000)
-            {
-                reader.Read(buffer, 0, (int)fileSize);
-                buffer = sha1.ComputeHash(buffer, 0, (int)fileSize);
-            }
-            else
-            {
-                reader.Read(buffer, 0, 0x5000);
-                stream.Seek(fileSize / 3, SeekOrigin.Begin);
-                reader.Read(buffer, 0x5000, 0x5000);
-                stream.Seek(fileSize - 0x5000, SeekOrigin.Begin);
-                reader.Read(buffer, 0xa000, 0x5000);
+            // 修改人: Meiam
+            // 修改时间: 2025-12-22
+            // 备注: 改造为异步方法，优化 I/O 性能，使用 SHA1.Create() 替代旧 API，并增加 using 语句释放资源
 
-                buffer = sha1.ComputeHash(buffer, 0, 0xf000);
-            }
-            var result = "";
-            foreach (var i in buffer)
+            using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
             {
-                result += string.Format("{0:X2}", i);
+                var fileSize = new FileInfo(filePath).Length;
+                using (var sha1 = SHA1.Create())
+                {
+                    var buffer = new byte[0xf000];
+                    if (fileSize < 0xf000)
+                    {
+                        await stream.ReadExactlyAsync(buffer, 0, (int)fileSize);
+                        buffer = sha1.ComputeHash(buffer, 0, (int)fileSize);
+                    }
+                    else
+                    {
+                        await stream.ReadExactlyAsync(buffer, 0, 0x5000);
+                        stream.Seek(fileSize / 3, SeekOrigin.Begin);
+                        await stream.ReadExactlyAsync(buffer, 0x5000, 0x5000);
+                        stream.Seek(fileSize - 0x5000, SeekOrigin.Begin);
+                        await stream.ReadExactlyAsync(buffer, 0xa000, 0x5000);
+
+                        buffer = sha1.ComputeHash(buffer, 0, 0xf000);
+                    }
+                    var result = "";
+                    foreach (var i in buffer)
+                    {
+                        result += string.Format("{0:X2}", i);
+                    }
+                    return result;
+                }
             }
-            return result;
         }
         #endregion
     }
