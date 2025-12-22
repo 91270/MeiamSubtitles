@@ -12,6 +12,12 @@
   <a href="https://www.592.la/"><img src="https://img.shields.io/badge/博客-Meiam's%20Home-brightgreen.svg" alt="博客"></a>
 </p>
 
+## 📣 广告时间
+
+> **搬瓦工 $99 年付**：建站神器重出江湖，THE PLAN V1 传家宝套餐，18机房随意切换。  
+> **循环优惠码**：`BWHCCNCXVV` (6.77%)  
+> **[直达通道 (传家宝套餐)](https://bwh88.net/aff.php?aff=117&pid=87)**
+
 ## ✨ 核心特性
 
 - **🚀 精准匹配**: 支持迅雷看看 (CID) 和射手网 (Hash) 双重校验逻辑，确保字幕与视频内容完美同步。
