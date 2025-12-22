@@ -1,0 +1,12 @@
+{
+  "category": "Subtitles",
+  "description": "Download subtitles from Thunder XMP",
+  "guid": "E4CE9DA9-EF00-417C-96F2-861C512D45EB",
+  "name": "MeiamSub.Thunder",
+  "owner": "Meiam",
+  "targetAbi": "10.11.0.0",
+  "timestamp": "2025-12-22T10:00:00.0000000Z",
+  "version": "1.0.13.0",
+  "status": "Active",
+  "imagePath": "thumb.png"
+}

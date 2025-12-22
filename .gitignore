@@ -366,3 +366,5 @@ FodyWeavers.xsd
 /TestServer
 
 TestServer/
+*.bat
+*.md

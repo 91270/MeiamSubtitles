@@ -66,14 +66,14 @@ namespace Jellyfin.MeiamSub.Thunder
         /// <param name="request">包含媒体路径、语言等信息的搜索请求对象</param>
         /// <param name="cancellationToken">取消令牌</param>
         /// <returns>远程字幕信息列表</returns>
-        public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
-        {
-            _logger.LogInformation($"{Name} Search | SubtitleSearchRequest -> {JsonSerializer.Serialize(request)}");
-
-            var subtitles = await SearchSubtitlesAsync(request);
-
-            return subtitles;
-        }
+                public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
+                {
+                    _logger.LogInformation("DEBUG: Received Search request for " + (request?.MediaPath ?? "NULL"));
+        
+                    var subtitles = await SearchSubtitlesAsync(request);
+        
+                    return subtitles;
+                }
 
         /// <summary>
         /// 查询字幕
@@ -84,17 +84,37 @@ namespace Jellyfin.MeiamSub.Thunder
         {
             // 修改人: Meiam
             // 修改时间: 2025-12-22
-            // 备注: 增加异常处理
+            // 备注: 增加极致探测日志
+
+            _logger.LogInformation("DEBUG: Entering SearchSubtitlesAsync (Thunder)");
 
             try
             {
-                var language = NormalizeLanguage(request.Language);
+                if (request == null)
+                {
+                    _logger.LogInformation("DEBUG: Request is null");
+                    return Array.Empty<RemoteSubtitleInfo>();
+                }
 
-                _logger.LogInformation("{Provider} Search | Target -> {File} | Language -> {Lang}", Name, Path.GetFileName(request.MediaPath), language);
+                var language = NormalizeLanguage(request.Language);
+                var fileName = string.Empty;
+
+                if (!string.IsNullOrEmpty(request.MediaPath))
+                {
+                    fileName = Path.GetFileName(request.MediaPath);
+                }
+
+                _logger.LogInformation(Name + " Search | Target -> " + fileName + " | Language -> " + language);
 
                 if (language != "chi")
                 {
-                    _logger.LogInformation("{Provider} Search | Summary -> Language not supported, skip search.", Name);
+                    _logger.LogInformation(Name + " Search | Summary -> Language not supported, skip search.");
+                    return Array.Empty<RemoteSubtitleInfo>();
+                }
+
+                if (string.IsNullOrEmpty(request.MediaPath))
+                {
+                    _logger.LogInformation(Name + " Search | Summary -> MediaPath is empty, skip search.");
                     return Array.Empty<RemoteSubtitleInfo>();
                 }
 
@@ -102,7 +122,7 @@ namespace Jellyfin.MeiamSub.Thunder
                 var cid = await GetCidByFileAsync(request.MediaPath);
                 stopWatch.Stop();
 
-                _logger.LogInformation("{Provider} Search | FileHash -> {Hash} (Took {Elapsed}ms)", Name, cid, stopWatch.ElapsedMilliseconds);
+                _logger.LogInformation(Name + " Search | FileHash -> " + cid + " (Took " + stopWatch.ElapsedMilliseconds + "ms)");
 
                 using var options = new HttpRequestMessage
                 {
@@ -159,7 +179,7 @@ namespace Jellyfin.MeiamSub.Thunder
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "{Provider} Search | Exception -> [{Type}] {Message}", Name, ex.GetType().Name, ex.Message);
+                _logger.LogError(ex, $"{Name} Search | Exception -> {ex.Message}");
             }
 
             _logger.LogInformation($"{Name} Search | Summary -> Get  0  Subtitles");
