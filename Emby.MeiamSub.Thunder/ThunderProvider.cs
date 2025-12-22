@@ -1,4 +1,4 @@
-﻿using Emby.MeiamSub.Thunder.Model;
+using Emby.MeiamSub.Thunder.Model;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Subtitles;
@@ -7,6 +7,7 @@ using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -14,7 +15,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using static System.Net.WebRequestMethods;
 
 namespace Emby.MeiamSub.Thunder
 {
@@ -88,14 +88,19 @@ namespace Emby.MeiamSub.Thunder
             {
                 var language = NormalizeLanguage(request.Language);
 
+                _logger.Info("{0} Search | Target -> {1} | Language -> {2}", Name, Path.GetFileName(request.MediaPath), language);
+
                 if (language != "chi")
                 {
+                    _logger.Info("{0} Search | Summary -> Language not supported, skip search.", Name);
                     return Array.Empty<RemoteSubtitleInfo>();
                 }
 
+                var stopWatch = Stopwatch.StartNew();
                 var cid = await GetCidByFileAsync(request.MediaPath);
+                stopWatch.Stop();
 
-                _logger.Info("{0} Search | FileHash -> {1}", new object[2] { Name, cid });
+                _logger.Info("{0} Search | FileHash -> {1} (Took {2}ms)", new object[3] { Name, cid, stopWatch.ElapsedMilliseconds });
 
 
                 HttpRequestOptions options = new HttpRequestOptions
@@ -107,7 +112,7 @@ namespace Emby.MeiamSub.Thunder
                 };
                 var response = await _httpClient.GetResponse(options);
 
-                _logger.Debug("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(response) });
+                _logger.Info("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(response) });
 
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
@@ -115,7 +120,7 @@ namespace Emby.MeiamSub.Thunder
 
                     if (subtitleResponse.Code == 0)
                     {
-                        _logger.Debug("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(subtitleResponse) });
+                        _logger.Info("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(subtitleResponse) });
 
                         var subtitles = subtitleResponse.Data.Where(m => !string.IsNullOrEmpty(m.Name));
 
@@ -152,7 +157,7 @@ namespace Emby.MeiamSub.Thunder
             }
             catch (Exception ex)
             {
-                _logger.Error("{0} Search | Error -> {1}", Name, ex.Message);
+                _logger.Error("{0} Search | Exception -> [{1}] {2}", Name, ex.GetType().Name, ex.Message);
             }
 
             _logger.Info("{0} Search | Summary -> Get  0  Subtitles", new object[1] { Name });
@@ -286,12 +291,15 @@ namespace Emby.MeiamSub.Thunder
 
             if (language.Equals("zh-CN", StringComparison.OrdinalIgnoreCase) ||
                 language.Equals("zh-TW", StringComparison.OrdinalIgnoreCase) ||
-                language.Equals("zh-HK", StringComparison.OrdinalIgnoreCase))
+                language.Equals("zh-HK", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("zh", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("zho", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("chi", StringComparison.OrdinalIgnoreCase))
             {
                 return "chi";
             }
-            // 迅雷可能只支持 chi，这里为了保持逻辑一致，也可以处理 eng，虽然 SearchSubtitlesAsync 会过滤掉
-            if (language.Equals("en", StringComparison.OrdinalIgnoreCase))
+            if (language.Equals("en", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("eng", StringComparison.OrdinalIgnoreCase))
             {
                 return "eng";
             }

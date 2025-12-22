@@ -363,3 +363,6 @@ MigrationBackup/
 FodyWeavers.xsd
 /GEMINI.md
 /TODO.md
+/TestServer
+
+TestServer/

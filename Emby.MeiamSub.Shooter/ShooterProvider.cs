@@ -7,6 +7,7 @@ using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Security.Cryptography;
@@ -86,16 +87,21 @@ namespace Emby.MeiamSub.Shooter
             {
                 var language = NormalizeLanguage(request.Language);
 
+                _logger.Info("{0} Search | Target -> {1} | Language -> {2}", Name, Path.GetFileName(request.MediaPath), language);
+
                 if (language != "chi" && language != "eng")
                 {
+                    _logger.Info("{0} Search | Summary -> Language not supported, skip search.", Name);
                     return Array.Empty<RemoteSubtitleInfo>();
                 }
 
                 FileInfo fileInfo = new FileInfo(request.MediaPath);
 
+                var stopWatch = Stopwatch.StartNew();
                 var hash = await ComputeFileHashAsync(fileInfo);
+                stopWatch.Stop();
 
-                _logger.Info("{0} Search | FileHash -> {1}", new object[2] { Name, hash });
+                _logger.Info("{0} Search | FileHash -> {1} (Took {2}ms)", new object[3] { Name, hash, stopWatch.ElapsedMilliseconds });
 
                 HttpRequestOptions options = new HttpRequestOptions
                 {
@@ -117,7 +123,7 @@ namespace Emby.MeiamSub.Shooter
 
                 var response = await _httpClient.Post(options);
 
-                _logger.Debug("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(response) });
+                _logger.Info("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(response) });
 
                 if (response.StatusCode == HttpStatusCode.OK && response.ContentType.Contains("application/json"))
                 {
@@ -125,7 +131,7 @@ namespace Emby.MeiamSub.Shooter
 
                     if (subtitleResponse != null)
                     {
-                        _logger.Debug("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(subtitleResponse) });
+                        _logger.Info("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(subtitleResponse) });
 
                         var remoteSubtitles = new List<RemoteSubtitleInfo>();
 
@@ -160,7 +166,7 @@ namespace Emby.MeiamSub.Shooter
             }
             catch (Exception ex)
             {
-                _logger.Error("{0} Search | Error -> {1}", Name, ex.Message);
+                _logger.Error("{0} Search | Exception -> [{1}] {2}", Name, ex.GetType().Name, ex.Message);
             }
 
             _logger.Info("{0} Search | Summary -> Get  0  Subtitles", new object[1] { Name });
@@ -295,11 +301,15 @@ namespace Emby.MeiamSub.Shooter
 
             if (language.Equals("zh-CN", StringComparison.OrdinalIgnoreCase) ||
                 language.Equals("zh-TW", StringComparison.OrdinalIgnoreCase) ||
-                language.Equals("zh-HK", StringComparison.OrdinalIgnoreCase))
+                language.Equals("zh-HK", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("zh", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("zho", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("chi", StringComparison.OrdinalIgnoreCase))
             {
                 return "chi";
             }
-            if (language.Equals("en", StringComparison.OrdinalIgnoreCase))
+            if (language.Equals("en", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("eng", StringComparison.OrdinalIgnoreCase))
             {
                 return "eng";
             }

@@ -7,6 +7,7 @@ using MediaBrowser.Model.Providers;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -92,16 +93,21 @@ namespace Jellyfin.MeiamSub.Shooter
             {
                 var language = NormalizeLanguage(request.Language);
 
+                _logger.LogInformation("{Provider} Search | Target -> {File} | Language -> {Lang}", Name, Path.GetFileName(request.MediaPath), language);
+
                 if (language != "chi" && language != "eng")
                 {
+                    _logger.LogInformation("{Provider} Search | Summary -> Language not supported, skip search.", Name);
                     return Array.Empty<RemoteSubtitleInfo>();
                 }
 
                 FileInfo fileInfo = new(request.MediaPath);
 
+                var stopWatch = Stopwatch.StartNew();
                 var hash = await ComputeFileHashAsync(fileInfo);
+                stopWatch.Stop();
 
-                _logger.LogInformation($"{Name} Search | FileHash -> {hash}");
+                _logger.LogInformation("{Provider} Search | FileHash -> {Hash} (Took {Elapsed}ms)", Name, hash, stopWatch.ElapsedMilliseconds);
 
                 var formData = new Dictionary<string, string>
                 {
@@ -121,18 +127,18 @@ namespace Jellyfin.MeiamSub.Shooter
                 // 发送 POST 请求
                 var response = await httpClient.PostAsync(ApiUrl, content);
 
-                _logger.LogDebug($"{Name} Search | Response -> {JsonSerializer.Serialize(response)}");
+                _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(response)}");
 
                 // 处理响应
                 if (response.IsSuccessStatusCode && response.Content.Headers.Any(m => m.Value.Contains("application/json; charset=utf-8")))
                 {
                     var responseBody = await response.Content.ReadAsStringAsync();
 
-                    _logger.LogDebug($"{Name} Search | ResponseBody -> {responseBody} ");
+                    _logger.LogInformation($"{Name} Search | ResponseBody -> {responseBody} ");
 
                     var subtitles = JsonSerializer.Deserialize<List<SubtitleResponseRoot>>(responseBody);
 
-                    _logger.LogDebug($"{Name} Search | Response -> {JsonSerializer.Serialize(subtitles)}");
+                    _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(subtitles)}");
 
                     if (subtitles != null)
                     {
@@ -171,7 +177,7 @@ namespace Jellyfin.MeiamSub.Shooter
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "{0} Search | Error -> {1}", Name, ex.Message);
+                _logger.LogError(ex, "{Provider} Search | Exception -> [{Type}] {Message}", Name, ex.GetType().Name, ex.Message);
             }
 
             _logger.LogInformation($"{Name} Search | Summary -> Get  0  Subtitles");
@@ -307,11 +313,15 @@ namespace Jellyfin.MeiamSub.Shooter
 
             if (language.Equals("zh-CN", StringComparison.OrdinalIgnoreCase) ||
                 language.Equals("zh-TW", StringComparison.OrdinalIgnoreCase) ||
-                language.Equals("zh-HK", StringComparison.OrdinalIgnoreCase))
+                language.Equals("zh-HK", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("zh", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("zho", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("chi", StringComparison.OrdinalIgnoreCase))
             {
                 return "chi";
             }
-            if (language.Equals("en", StringComparison.OrdinalIgnoreCase))
+            if (language.Equals("en", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("eng", StringComparison.OrdinalIgnoreCase))
             {
                 return "eng";
             }
