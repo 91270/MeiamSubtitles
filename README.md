@@ -1,15 +1,12 @@
 # MeiamSubtitles
-Emby Jellyfin 中文字幕插件 ，支持 迅雷影音、射手网、 精准匹配，自动下载
+Emby & Jellyfin 中文字幕插件，支持 **迅雷影音**、**射手网** 字幕自动下载与精准 Hash 匹配。
 
-
-[![.NET CORE](https://img.shields.io/badge/.NET%20Core-3.1-d.svg)](#)
+[![.NET Status](https://img.shields.io/badge/.NET-Standard%202.1%20%7C%209.0-blueviolet.svg)](#)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Win%20%7C%20OSX-brightgreen.svg)](#)
 [![LICENSE](https://img.shields.io/badge/license-Apache%202-blue)](#)
 [![Star](https://img.shields.io/github/stars/91270/Emby.MeiamSub?label=Star%20this%20repo)](https://github.com/91270/Emby.MeiamSub)
 [![Fork](https://img.shields.io/github/forks/91270/Emby.MeiamSub?label=Fork%20this%20repo)](https://github.com/91270/Emby.MeiamSub/fork)
 [![博客](https://img.shields.io/badge/博客-Meiam's%20Home-brightgreen.svg)](https://www.592.la/)
-
-
 
 &nbsp;
 
@@ -33,72 +30,83 @@ Emby Jellyfin 中文字幕插件 ，支持 迅雷影音、射手网、 精准匹
 
 ## 功能介绍
 
-
-- [x] 支持  迅雷看看    字幕下载    Hash匹配
-- [x] 支持  射手影音    字幕下载    Hash匹配
-
+- [x] **迅雷影音**: 支持通过文件 Hash (CID) 精准匹配字幕。
+- [x] **射手网**: 支持通过文件 Hash 精准匹配字幕。
+- [x] **高性能**: 核心哈希计算采用异步 I/O (Async/Await) 模式，避免阻塞服务器线程。
+- [x] **稳定性**: 内置重试机制与异常处理，Jellyfin 版本采用现代化的依赖注入架构。
 
 ## 项目说明
 
-| # | 模块功能                      |  项目文件                    | 说明
-|---|-------------------------------|-------------------------------|-------------------------------
-| 1 | 开发程序 | Emby.MeiamSub.DevTool | 项目开发测试调试使用
-| 2 | 字幕插件 | Emby.MeiamSub.Thunder | 迅雷看看字幕插件 - Emby
-| 3 | 字幕插件 | Emby.MeiamSub.Shooter | 射手影音字幕插件 - Emby
-| 4 | 字幕插件 | Jellyfin.MeiamSub.Shooter | 迅雷看看字幕插件 - Jellyfin
-| 5 | 字幕插件 | Jellyfin.MeiamSub.Thunder | 射手影音字幕插件 - Jellyfin
-
-
+| # | 模块功能 | 项目名称 | 说明 |
+|---|---|---|---|
+| 1 | Emby 插件 | `Emby.MeiamSub.Thunder` | 迅雷看看字幕插件 (.NET Standard 2.1) |
+| 2 | Emby 插件 | `Emby.MeiamSub.Shooter` | 射手影音字幕插件 (.NET Standard 2.1) |
+| 3 | Jellyfin 插件 | `Jellyfin.MeiamSub.Thunder` | 迅雷看看字幕插件 (.NET 9.0) |
+| 4 | Jellyfin 插件 | `Jellyfin.MeiamSub.Shooter` | 射手影音字幕插件 (.NET 9.0) |
+| 5 | 开发工具 | `Emby.MeiamSub.DevTool` | 哈希算法测试与调试工具 |
 
 ## 使用插件
 
-首先下载已编译好的插件 [LINK](https://github.com/91270/Emby.MeiamSub/releases) ，由于 Jellyfin 自身 [BUG](https://github.com/jellyfin/jellyfin/issues/12434) , 会重复下载字幕 。
+首先下载已编译好的插件 [Release 下载](https://github.com/91270/Emby.MeiamSub/releases)。
 
-建议：媒体库不勾选本插件, 自动扫描缺失字幕时不使用该插件，但不影响手动查找字幕
+**注意**：建议在媒体库设置中**不勾选**本插件作为默认下载器，仅在手动“编辑字幕”或“搜索字幕”时使用，以获得最佳体验。
 
-### WINDOWS
+### Jellyfin 安装 (推荐)
+
+Jellyfin 用户可以通过添加插件存储库实现一键安装和自动更新：
+
+1. 打开 Jellyfin 控制台 -> **插件** -> **存储库**。
+2. 点击添加，输入名称 (如 MeiamSub) 和以下 URL：
+   ```
+   https://github.com/91270/MeiamSubtitles.Release/raw/main/Plugin/manifest-stable.json
+   ```
+3. 保存后在插件目录中找到 **MeiamSub.Thunder** 和 **MeiamSub.Shooter** 进行安装。
+4. 重启 Jellyfin 服务。
+
+### 手动安装 (Emby / 通用)
+
+将下载的 `.dll` 文件复制到服务器的插件目录，然后重启服务。
+
+#### Windows
 ```bash
-复制插件文件到   Emby-Server\Programdata\Plugins\
-复制插件文件到   Emby-Server\System\Plugins\
-重启服务
+# 路径可能因安装方式不同而异
+Emby-Server\Programdata\Plugins\
+# 或
+Emby-Server\System\Plugins\
 ```
 
-### LINUX
+#### Linux / Docker
 ```bash
-复制插件文件到  /opt/emby-server/system/plugins
-复制插件文件到  /var/lib/emby/plugins
-重启服务
+# 常见路径
+/opt/emby-server/system/plugins
+# 或
+/var/lib/emby/plugins
 ```
 
-&nbsp;
+#### 群晖 (Synology)
 
-### 群晖
 ```bash
-复制插件文件到 /var/packages/EmbyServer/var/plugins
-复制插件文件到 /var/packages/EmbyServer/target/system/plugins
-重启服务
+/var/packages/EmbyServer/var/plugins
+# 或
+/var/packages/EmbyServer/target/system/plugins
 ```
 
-### 威联通
+#### 威联通 (QNAP)
+
 ```bash
 # 其中`CACHEDEV{num}_DATA`的名称取决于你的qpkg安装位置
-复制插件文件到 /share/CACHEDEV1_DATA/.qpkg/EmbyServer/programdata/plugins
-复制插件文件到 /share/CACHEDEV1_DATA/.qpkg/EmbyServer/system/plugins
-重启服务
-```
-
-
-### Jellyfin 可通过存储库安装、更新插件
-```bash
-# 通过 控制台 -> 插件 -> 存储库 添加存储库 URL , 即可通过插件目录查看并安装插件
-https://github.com/91270/MeiamSubtitles.Release/raw/main/Plugin/manifest-stable.json
+/share/CACHEDEV1_DATA/.qpkg/EmbyServer/programdata/plugins
+/share/CACHEDEV1_DATA/.qpkg/EmbyServer/system/plugins
 ```
 
 &nbsp;
 
 ## 贡献
 
-贡献的最简单的方法之一就是是参与讨论和讨论问题（issue）。你也可以通过提交的 Pull Request 代码变更作出贡献。
+欢迎提交 Issue 反馈问题，或提交 Pull Request 贡献代码。
+
+*   **开发分支**: `master`
+*   **代码风格**: 请遵循现有的 C# 代码风格，异步方法请使用 `Async` 后缀。
 
 ## 致谢
 
