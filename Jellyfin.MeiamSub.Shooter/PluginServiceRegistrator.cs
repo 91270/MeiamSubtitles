@@ -14,6 +14,13 @@ namespace Jellyfin.MeiamSub.Shooter
     {
         public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHos)
         {
+            serviceCollection.AddHttpClient("MeiamSub.Shooter", client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(30);
+                client.DefaultRequestHeaders.Add("User-Agent", "MeiamSub.Shooter");
+                client.DefaultRequestHeaders.Add("Accept", "*/*");
+            });
+
             serviceCollection.AddSingleton<ISubtitleProvider, ShooterProvider>();
         }
     }

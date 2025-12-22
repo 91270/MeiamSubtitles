@@ -36,8 +36,7 @@ namespace Jellyfin.MeiamSub.Shooter
         public const string SRT = "srt";
 
         private readonly ILogger<ShooterProvider> _logger;
-
-        private static readonly HttpClient _httpClient = new HttpClient();
+        private readonly IHttpClientFactory _httpClientFactory;
 
         private const string ApiUrl = "https://www.shooter.cn/api/subapi.php";
 
@@ -52,10 +51,10 @@ namespace Jellyfin.MeiamSub.Shooter
         #endregion
 
         #region 构造函数
-        public ShooterProvider(ILogger<ShooterProvider> logger)
+        public ShooterProvider(ILogger<ShooterProvider> logger, IHttpClientFactory httpClientFactory)
         {
             _logger = logger;
-            _httpClient.Timeout = TimeSpan.FromSeconds(30);
+            _httpClientFactory = httpClientFactory;
             _logger.LogInformation($"{Name} Init");
         }
         #endregion
@@ -91,7 +90,9 @@ namespace Jellyfin.MeiamSub.Shooter
 
             try
             {
-                if (request.Language != "chi" && request.Language != "eng")
+                var language = NormalizeLanguage(request.Language);
+
+                if (language != "chi" && language != "eng")
                 {
                     return Array.Empty<RemoteSubtitleInfo>();
                 }
@@ -107,7 +108,7 @@ namespace Jellyfin.MeiamSub.Shooter
                     { "filehash", hash},
                     { "pathinfo", request.MediaPath},
                     { "format", "json"},
-                    { "lang", request.Language ==  "chi" ? "chn" : "eng"}
+                    { "lang", language ==  "chi" ? "chn" : "eng"}
                 };
 
                 var content = new FormUrlEncodedContent(formData);
@@ -115,21 +116,23 @@ namespace Jellyfin.MeiamSub.Shooter
                 // 设置请求头
                 content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
 
-                // 发送 POST 请求
-                var response = await _httpClient.PostAsync(ApiUrl, content);
+                using var httpClient = _httpClientFactory.CreateClient(Name);
 
-                _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(response)}");
+                // 发送 POST 请求
+                var response = await httpClient.PostAsync(ApiUrl, content);
+
+                _logger.LogDebug($"{Name} Search | Response -> {JsonSerializer.Serialize(response)}");
 
                 // 处理响应
                 if (response.IsSuccessStatusCode && response.Content.Headers.Any(m => m.Value.Contains("application/json; charset=utf-8")))
                 {
                     var responseBody = await response.Content.ReadAsStringAsync();
 
-                    _logger.LogInformation($"{Name} Search | ResponseBody -> {responseBody} ");
+                    _logger.LogDebug($"{Name} Search | ResponseBody -> {responseBody} ");
 
                     var subtitles = JsonSerializer.Deserialize<List<SubtitleResponseRoot>>(responseBody);
 
-                    _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(subtitles)}");
+                    _logger.LogDebug($"{Name} Search | Response -> {JsonSerializer.Serialize(subtitles)}");
 
                     if (subtitles != null)
                     {
@@ -146,7 +149,7 @@ namespace Jellyfin.MeiamSub.Shooter
                                     {
                                         Url = subFile.Link,
                                         Format = subFile.Ext,
-                                        Language = request.Language,
+                                        Language = language,
                                         TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
                                     })),
                                     Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {request.TwoLetterISOLanguageName} | 射手",
@@ -217,15 +220,12 @@ namespace Jellyfin.MeiamSub.Shooter
                 using var options = new HttpRequestMessage
                 {
                     Method = HttpMethod.Get,
-                    RequestUri = new Uri(downloadSub.Url),
-                    Headers =
-                    {
-                        UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue($"{Name}")) },
-                        Accept = { new MediaTypeWithQualityHeaderValue("*/*") }
-                    }
+                    RequestUri = new Uri(downloadSub.Url)
                 };
 
-                var response = await _httpClient.SendAsync(options);
+                using var httpClient = _httpClientFactory.CreateClient(Name);
+
+                var response = await httpClient.SendAsync(options);
 
                 _logger.LogInformation($"{Name} DownloadSub | Response -> {response.StatusCode}");
 
@@ -294,6 +294,28 @@ namespace Jellyfin.MeiamSub.Shooter
             if (text.Contains(SRT)) return SRT;
 
             return null;
+        }
+
+        /// <summary>
+        /// 规范化语言代码
+        /// </summary>
+        /// <param name="language"></param>
+        /// <returns></returns>
+        private static string NormalizeLanguage(string language)
+        {
+            if (string.IsNullOrEmpty(language)) return language;
+
+            if (language.Equals("zh-CN", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("zh-TW", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("zh-HK", StringComparison.OrdinalIgnoreCase))
+            {
+                return "chi";
+            }
+            if (language.Equals("en", StringComparison.OrdinalIgnoreCase))
+            {
+                return "eng";
+            }
+            return language;
         }
 
         /// <summary>

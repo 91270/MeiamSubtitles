@@ -50,7 +50,15 @@ namespace Emby.MeiamSub.Thunder
         public Stream GetThumbImage()
         {
             var type = GetType();
-            return type.Assembly.GetManifestResourceStream(type.Namespace + ".Thumb.png");
+            var resourceName = $"{type.Namespace}.Thumb.png";
+            var stream = type.Assembly.GetManifestResourceStream(resourceName);
+
+            if (stream == null)
+            {
+                return null;
+            }
+
+            return stream;
         }
     }
 }

@@ -1,10 +1,8 @@
 ﻿using Jellyfin.MeiamSub.Shooter.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
-using MediaBrowser.Model.Drawing;
 using MediaBrowser.Model.Serialization;
 using System;
-using System.IO;
 
 namespace Jellyfin.MeiamSub.Shooter
 {
@@ -30,7 +28,7 @@ namespace Jellyfin.MeiamSub.Shooter
         public override string Description => "Download subtitles from Shooter";
 
         public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
-    : base(applicationPaths, xmlSerializer)
+            : base(applicationPaths, xmlSerializer)
         {
             Instance = this;
         }

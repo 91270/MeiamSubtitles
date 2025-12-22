@@ -32,7 +32,7 @@ namespace Jellyfin.MeiamSub.Thunder
         public const string SRT = "srt";
 
         private readonly ILogger<ThunderProvider> _logger;
-        private static readonly HttpClient _httpClient = new HttpClient();
+        private readonly IHttpClientFactory _httpClientFactory;
         private static readonly JsonSerializerOptions _deserializeOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
@@ -48,10 +48,10 @@ namespace Jellyfin.MeiamSub.Thunder
         #endregion
 
         #region 构造函数
-        public ThunderProvider(ILogger<ThunderProvider> logger)
+        public ThunderProvider(ILogger<ThunderProvider> logger, IHttpClientFactory httpClientFactory)
         {
             _logger = logger;
-            _httpClient.Timeout = TimeSpan.FromSeconds(30);
+            _httpClientFactory = httpClientFactory;
             _logger.LogInformation($"{Name} Init");
         }
         #endregion
@@ -74,93 +74,177 @@ namespace Jellyfin.MeiamSub.Thunder
             return subtitles;
         }
 
-        /// <summary>
-        /// 查询字幕
-        /// </summary>
-        /// <param name="request"></param>
-        /// <returns></returns>
-        private async Task<IEnumerable<RemoteSubtitleInfo>> SearchSubtitlesAsync(SubtitleSearchRequest request)
-        {
-            // 修改人: Meiam
-            // 修改时间: 2025-12-22
-            // 备注: 增加异常处理
+                /// <summary>
 
-            try
-            {
-                if (request.Language != "chi")
+                /// 查询字幕
+
+                /// </summary>
+
+                /// <param name="request"></param>
+
+                /// <returns></returns>
+
+                private async Task<IEnumerable<RemoteSubtitleInfo>> SearchSubtitlesAsync(SubtitleSearchRequest request)
+
                 {
-                    return Array.Empty<RemoteSubtitleInfo>();
-                }
 
-                var cid = await GetCidByFileAsync(request.MediaPath);
+                    // 修改人: Meiam
 
-                _logger.LogInformation($"{Name} Search | FileHash -> {cid}");
+                    // 修改时间: 2025-12-22
 
-                using var options = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get,
-                    RequestUri = new Uri($"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?name={Path.GetFileName(request.MediaPath)}"),
-                    Headers =
+                    // 备注: 增加异常处理
+
+        
+
+                    try
+
                     {
-                        UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue($"{Name}")) },
-                        Accept = { new MediaTypeWithQualityHeaderValue("*/*") },
-                    }
-                };
 
-                var response = await _httpClient.SendAsync(options);
+                        var language = NormalizeLanguage(request.Language);
 
-                _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(response)}");
+        
 
-                if (response.StatusCode == HttpStatusCode.OK)
-                {
-                    var subtitleResponse = JsonSerializer.Deserialize<SubtitleResponseRoot>(await response.Content.ReadAsStringAsync(), _deserializeOptions);
+                        if (language != "chi")
 
-                    if (subtitleResponse != null)
-                    {
-                        _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(subtitleResponse)}");
-
-                        var subtitles = subtitleResponse.Data.Where(m => !string.IsNullOrEmpty(m.Name));
-
-                        var remoteSubtitles = new List<RemoteSubtitleInfo>();
-
-                        if (subtitles.Count() > 0)
                         {
-                            foreach (var item in subtitles)
-                            {
-                                remoteSubtitles.Add(new RemoteSubtitleInfo()
-                                {
-                                    Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
-                                    {
-                                        Url = item.Url,
-                                        Format = item.Ext,
-                                        Language = request.Language,
-                                        TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
-                                    })),
-                                    Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
-                                    Author = "Meiam ",
-                                    ProviderName = $"{Name}",
-                                    Format = item.Ext,
-                                    Comment = $"Format : {item.Ext}",
-                                    IsHashMatch = cid == item.Cid,
-                                });
-                            }
+
+                            return Array.Empty<RemoteSubtitleInfo>();
+
                         }
 
-                        _logger.LogInformation($"{Name} Search | Summary -> Get  {subtitles.Count()}  Subtitles");
+        
 
-                        return remoteSubtitles;
+                        var cid = await GetCidByFileAsync(request.MediaPath);
+
+        
+
+                        _logger.LogInformation($"{Name} Search | FileHash -> {cid}");
+
+        
+
+                        using var options = new HttpRequestMessage
+
+                        {
+
+                            Method = HttpMethod.Get,
+
+                            RequestUri = new Uri($"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?name={Path.GetFileName(request.MediaPath)}")
+
+                        };
+
+        
+
+                        using var httpClient = _httpClientFactory.CreateClient(Name);
+
+        
+
+                        var response = await httpClient.SendAsync(options);
+
+        
+
+                        _logger.LogDebug($"{Name} Search | Response -> {JsonSerializer.Serialize(response)}");
+
+        
+
+                        if (response.StatusCode == HttpStatusCode.OK)
+
+                        {
+
+                            var subtitleResponse = JsonSerializer.Deserialize<SubtitleResponseRoot>(await response.Content.ReadAsStringAsync(), _deserializeOptions);
+
+        
+
+                            if (subtitleResponse != null)
+
+                            {
+
+                                _logger.LogDebug($"{Name} Search | Response -> {JsonSerializer.Serialize(subtitleResponse)}");
+
+        
+
+                                var subtitles = subtitleResponse.Data.Where(m => !string.IsNullOrEmpty(m.Name));
+
+        
+
+                                var remoteSubtitles = new List<RemoteSubtitleInfo>();
+
+        
+
+                                if (subtitles.Count() > 0)
+
+                                {
+
+                                    foreach (var item in subtitles)
+
+                                    {
+
+                                        remoteSubtitles.Add(new RemoteSubtitleInfo()
+
+                                        {
+
+                                            Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
+
+                                            {
+
+                                                Url = item.Url,
+
+                                                Format = item.Ext,
+
+                                                Language = language,
+
+                                                TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
+
+                                            })),
+
+                                            Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
+
+                                            Author = "Meiam ",
+
+                                            ProviderName = $"{Name}",
+
+                                            Format = item.Ext,
+
+                                            Comment = $"Format : {item.Ext}",
+
+                                            IsHashMatch = cid == item.Cid,
+
+                                        });
+
+                                    }
+
+                                }
+
+        
+
+                                _logger.LogInformation($"{Name} Search | Summary -> Get  {subtitles.Count()}  Subtitles");
+
+        
+
+                                return remoteSubtitles;
+
+                            }
+
+                        }
+
                     }
+
+                    catch (Exception ex)
+
+                    {
+
+                        _logger.LogError(ex, "{0} Search | Error -> {1}", Name, ex.Message);
+
+                    }
+
+        
+
+                    _logger.LogInformation($"{Name} Search | Summary -> Get  0  Subtitles");
+
+        
+
+                    return Array.Empty<RemoteSubtitleInfo>();
+
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "{0} Search | Error -> {1}", Name, ex.Message);
-            }
-
-            _logger.LogInformation($"{Name} Search | Summary -> Get  0  Subtitles");
-
-            return Array.Empty<RemoteSubtitleInfo>();
-        }
         #endregion
 
         #region 下载字幕
@@ -200,20 +284,16 @@ namespace Jellyfin.MeiamSub.Thunder
 
                 _logger.LogInformation($"{Name} DownloadSub | Url -> {downloadSub.Url}  |  Format -> {downloadSub.Format} |  Language -> {downloadSub.Language} ");
 
-                using var options = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get,
-                    RequestUri = new Uri(downloadSub.Url),
-                    Headers =
-                    {
-                        UserAgent = { new ProductInfoHeaderValue(new ProductHeaderValue($"{Name}")) },
-                        Accept = { new MediaTypeWithQualityHeaderValue("*/*") }
-                    }
-                };
-
-                var response = await _httpClient.SendAsync(options);
-
-                _logger.LogInformation($"{Name} DownloadSub | Response -> {response.StatusCode}");
+                                using var options = new HttpRequestMessage
+                                {
+                                    Method = HttpMethod.Get,
+                                    RequestUri = new Uri(downloadSub.Url)
+                                };
+                
+                                using var httpClient = _httpClientFactory.CreateClient(Name);
+                
+                                var response = await httpClient.SendAsync(options);                    
+                                    _logger.LogInformation($"{Name} DownloadSub | Response -> {response.StatusCode}");
 
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
@@ -279,6 +359,28 @@ namespace Jellyfin.MeiamSub.Thunder
             if (text.Contains(SRT)) return SRT;
 
             return null;
+        }
+
+        /// <summary>
+        /// 规范化语言代码
+        /// </summary>
+        /// <param name="language"></param>
+        /// <returns></returns>
+        private static string NormalizeLanguage(string language)
+        {
+            if (string.IsNullOrEmpty(language)) return language;
+
+            if (language.Equals("zh-CN", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("zh-TW", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("zh-HK", StringComparison.OrdinalIgnoreCase))
+            {
+                return "chi";
+            }
+            if (language.Equals("en", StringComparison.OrdinalIgnoreCase))
+            {
+                return "eng";
+            }
+            return language;
         }
 
         /// <summary>

@@ -48,7 +48,18 @@ namespace Emby.MeiamSub.Shooter
         public Stream GetThumbImage()
         {
             var type = GetType();
-            return type.Assembly.GetManifestResourceStream(type.Namespace + ".Thumb.png");
+            var resourceName = $"{type.Namespace}.Thumb.png";
+            var stream = type.Assembly.GetManifestResourceStream(resourceName);
+
+            if (stream == null)
+            {
+                // 如果找不到资源，尝试不带命名空间的名称，或者记录错误
+                // 这里我们至少确保不会返回 null 导致外部空引用（虽然 Emby 可能处理 null）
+                // 但为了稳健，如果真的没有，返回 null 是正确的，Emby 会显示默认图标
+                return null;
+            }
+
+            return stream;
         }
     }
 }
