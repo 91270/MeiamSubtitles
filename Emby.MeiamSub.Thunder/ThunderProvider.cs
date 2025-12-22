@@ -35,7 +35,7 @@ namespace Emby.MeiamSub.Thunder
         private readonly IJsonSerializer _jsonSerializer;
         private readonly IHttpClient _httpClient;
 
-        public int Order => 1;
+        public int Order => 100;
 
         public string Name => "MeiamSub.Thunder";
 
@@ -136,17 +136,17 @@ namespace Emby.MeiamSub.Thunder
                                                                     {
                                                                         Url = item.Url,
                                                                         Format = item.Ext,
-                                                                        Language = request.Language,
-                                                                        IsForced = request.IsForced
-                                                                    })),
-                                                                    Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
-                                                                    Language = request.Language,
-                                                                    Author = "Meiam ",
-                                                                    ProviderName = $"{Name}",
-                                                                    Format = item.Ext,
-                                                                    Comment = $"Format : {item.Ext}",
-                                                                    IsHashMatch = cid == item.Cid,
-                                                                });                            }
+                                                                                                                                                Language = request.Language,
+                                                                                                                                                IsForced = request.IsForced
+                                                                                                                                            })),
+                                                                                                                                            Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
+                                                                                                                                            Language = request.Language,
+                                                                                                                                            Author = "Meiam ",
+                                                                                                                                            ProviderName = $"{Name}",
+                                                                                                                                            Format = item.Ext,
+                                                                                                                                            Comment = $"Format : {item.Ext}",
+                                                                                                                                            IsHashMatch = cid == item.Cid,
+                                                                                                                                        });                            }
                         }
 
                         _logger.Info("{0} Search | Summary -> Get  {1}  Subtitles", new object[2] { Name, remoteSubtitles.Count });

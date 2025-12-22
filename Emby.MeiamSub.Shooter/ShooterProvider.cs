@@ -35,7 +35,7 @@ namespace Emby.MeiamSub.Shooter
         private readonly IJsonSerializer _jsonSerializer;
         private readonly IHttpClient _httpClient;
 
-        public int Order => 1;
+        public int Order => 100;
         public string Name => "MeiamSub.Shooter";
 
         /// <summary>
@@ -145,17 +145,17 @@ namespace Emby.MeiamSub.Shooter
                                                                     {
                                                                         Url = subFile.Link,
                                                                         Format = subFile.Ext,
-                                                                        Language = request.Language,
-                                                                        IsForced = request.IsForced
-                                                                    })),
-                                                                    Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {language} | 射手",
-                                                                    Language = request.Language,
-                                                                    Author = "Meiam ",
-                                                                    ProviderName = $"{Name}",
-                                                                    Format = subFile.Ext,
-                                                                    Comment = $"Format : {ExtractFormat(subFile.Ext)}",
-                                                                    IsHashMatch = true
-                                                                });                            }
+                                    Language = request.Language,
+                                    IsForced = request.IsForced
+                                })),
+                                Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {request.Language} | 射手",
+                                Language = request.Language,
+                                Author = "Meiam ",
+                                ProviderName = $"{Name}",
+                                Format = subFile.Ext,
+                                Comment = $"Format : {ExtractFormat(subFile.Ext)}",
+                                IsHashMatch = true
+                            });                            }
                         }
                         _logger.Info("{0} Search | Summary -> Get  {1}  Subtitles", new object[2] { Name, remoteSubtitles.Count });
 
