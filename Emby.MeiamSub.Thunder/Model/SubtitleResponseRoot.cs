@@ -20,7 +20,7 @@ namespace Emby.MeiamSub.Thunder.Model
         public int Duration { get; set; }
         public string[] Languages { get; set; }
 
-        public string Langs=> Languages != null ? string.Join(",", Languages) : string.Empty;
+        public string Langs => Languages != null ? string.Join(",", Languages) : string.Empty;
 
         public int Source { get; set; }
         public int Score { get; set; }

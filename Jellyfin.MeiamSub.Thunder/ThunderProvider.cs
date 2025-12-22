@@ -68,7 +68,7 @@ namespace Jellyfin.MeiamSub.Thunder
         /// <returns>远程字幕信息列表</returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation($"{Name} Search | SubtitleSearchRequest -> { JsonSerializer.Serialize(request) }");
+            _logger.LogInformation($"{Name} Search | SubtitleSearchRequest -> {JsonSerializer.Serialize(request)}");
 
             var subtitles = await SearchSubtitlesAsync(request);
 
@@ -138,16 +138,17 @@ namespace Jellyfin.MeiamSub.Thunder
                                     {
                                         Url = item.Url,
                                         Format = item.Ext,
-                                                                            Language = request.Language,
-                                                                            TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
-                                                                        })),
-                                                                        Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
-                                                                        Author = "Meiam ",
-                                                                        ProviderName = $"{Name}",
-                                                                        Format = item.Ext,
-                                                                        Comment = $"Format : {item.Ext}",
-                                                                        IsHashMatch = cid == item.Cid,
-                                                                    });                            }
+                                        Language = request.Language,
+                                        TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
+                                    })),
+                                    Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
+                                    Author = "Meiam ",
+                                    ProviderName = $"{Name}",
+                                    Format = item.Ext,
+                                    Comment = $"Format : {item.Ext}",
+                                    IsHashMatch = cid == item.Cid,
+                                });
+                            }
                         }
 
                         _logger.LogInformation($"{Name} Search | Summary -> Get  {subtitles.Count()}  Subtitles");

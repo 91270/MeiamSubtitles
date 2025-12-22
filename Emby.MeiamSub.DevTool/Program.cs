@@ -20,7 +20,7 @@ namespace Emby.Subtitle.DevTool
             Console.OutputEncoding = Encoding.UTF8;
 
             Console.WriteLine("================ MeiamSubtitles 调试工具 ================");
-            
+
             // 待测试的影音文件路径
             var testFilePath = @"D:\Source\MeiamSubtitles\TestServer\Movie\2009\三傻大闹宝莱坞\三傻大闹宝莱坞 (2009) - 1080p.mkv";
 
@@ -69,7 +69,15 @@ namespace Emby.Subtitle.DevTool
                 var response = await _httpClient.PostAsync(url, content);
                 var result = await response.Content.ReadAsStringAsync();
                 Console.WriteLine($" > STATUS: {response.StatusCode}");
-                Console.WriteLine($" > RETURN: {result}");
+
+                if (!result.Trim().StartsWith("["))
+                {
+                    Console.WriteLine($" > [警告] API 返回了非法内容 (可能已失效或乱码): {result}");
+                }
+                else
+                {
+                    Console.WriteLine($" > RETURN: {result}");
+                }
             }
             catch (Exception ex)
             {
@@ -84,7 +92,7 @@ namespace Emby.Subtitle.DevTool
                 // 迅雷搜索接口通常基于文件名，CID 用于后续匹配校验
                 var fileName = Path.GetFileName(filePath);
                 var url = $"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?name={HttpUtility.UrlEncode(fileName)}";
-                
+
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
                 request.Headers.Add("User-Agent", "MeiamSub.Thunder");
 

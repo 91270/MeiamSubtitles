@@ -71,7 +71,7 @@ namespace Jellyfin.MeiamSub.Shooter
         /// <returns>远程字幕信息列表</returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation($"{Name} Search | SubtitleSearchRequest -> { JsonSerializer.Serialize(request) }");
+            _logger.LogInformation($"{Name} Search | SubtitleSearchRequest -> {JsonSerializer.Serialize(request)}");
 
             var subtitles = await SearchSubtitlesAsync(request);
 
@@ -130,11 +130,42 @@ namespace Jellyfin.MeiamSub.Shooter
                 _logger.LogInformation($"{Name} Search | Response -> {JsonSerializer.Serialize(response)}");
 
                 // 处理响应
+
                 if (response.IsSuccessStatusCode && response.Content.Headers.Any(m => m.Value.Contains("application/json; charset=utf-8")))
+
                 {
+
                     var responseBody = await response.Content.ReadAsStringAsync();
 
+
+
                     _logger.LogInformation($"{Name} Search | ResponseBody -> {responseBody} ");
+
+
+
+                    if (string.IsNullOrEmpty(responseBody) || !responseBody.Trim().StartsWith("["))
+
+
+
+                    {
+
+
+
+                        _logger.LogInformation($"{Name} Search | Summary -> API returned invalid content (likely no subtitles found or API error).");
+
+
+
+                        return Array.Empty<RemoteSubtitleInfo>();
+
+
+
+                    }
+
+
+
+
+
+
 
                     var subtitles = JsonSerializer.Deserialize<List<SubtitleResponseRoot>>(responseBody);
 
@@ -151,20 +182,21 @@ namespace Jellyfin.MeiamSub.Shooter
                             {
                                 remoteSubtitles.Add(new RemoteSubtitleInfo()
                                 {
-                                Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
-                                {
-                                    Url = subFile.Link,
+                                    Id = Base64Encode(JsonSerializer.Serialize(new DownloadSubInfo
+                                    {
+                                        Url = subFile.Link,
+                                        Format = subFile.Ext,
+                                        Language = request.Language,
+                                        TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
+                                    })),
+                                    Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {request.TwoLetterISOLanguageName} | 射手",
+                                    Author = "Meiam ",
+                                    ProviderName = $"{Name}",
                                     Format = subFile.Ext,
-                                    Language = request.Language,
-                                    TwoLetterISOLanguageName = request.TwoLetterISOLanguageName,
-                                })),
-                                Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {request.TwoLetterISOLanguageName} | 射手",
-                                Author = "Meiam ",
-                                ProviderName = $"{Name}",
-                                Format = subFile.Ext,
-                                Comment = $"Format : {ExtractFormat(subFile.Ext)}",
-                                IsHashMatch = true
-                            });                            }
+                                    Comment = $"Format : {ExtractFormat(subFile.Ext)}",
+                                    IsHashMatch = true
+                                });
+                            }
                         }
 
                         _logger.LogInformation($"{Name} Search | Summary -> Get  {remoteSubtitles.Count}  Subtitles");

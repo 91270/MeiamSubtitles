@@ -45,7 +45,7 @@ namespace Emby.MeiamSub.Shooter
         #endregion
 
         #region 构造函数
-        public ShooterProvider(ILogManager logManager, IJsonSerializer jsonSerializer,IHttpClient httpClient)
+        public ShooterProvider(ILogManager logManager, IJsonSerializer jsonSerializer, IHttpClient httpClient)
         {
             _logger = logManager.GetLogger(GetType().Name);
             _jsonSerializer = jsonSerializer;
@@ -65,7 +65,7 @@ namespace Emby.MeiamSub.Shooter
         /// <returns>远程字幕信息列表</returns>
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
-            _logger.Info("{0} Search | SubtitleSearchRequest -> {1}", new object[2] { Name , _jsonSerializer.SerializeToString(request) });
+            _logger.Info("{0} Search | SubtitleSearchRequest -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(request) });
 
             var subtitles = await SearchSubtitlesAsync(request);
 
@@ -127,7 +127,25 @@ namespace Emby.MeiamSub.Shooter
 
                 if (response.StatusCode == HttpStatusCode.OK && response.ContentType.Contains("application/json"))
                 {
-                    var subtitleResponse = _jsonSerializer.DeserializeFromStream<List<SubtitleResponseRoot>>(response.Content);
+                    // 修改人: Meiam
+                    // 修改时间: 2025-12-22
+                    // 备注: 增加对射手网 API 返回非法内容(如乱码)的校验
+
+                    string responseBody;
+                    using (var reader = new StreamReader(response.Content, Encoding.UTF8))
+                    {
+                        responseBody = await reader.ReadToEndAsync();
+                    }
+
+                    _logger.Info("{0} Search | ResponseBody -> {1}", new object[2] { Name, responseBody });
+
+                    if (string.IsNullOrEmpty(responseBody) || !responseBody.Trim().StartsWith("["))
+                    {
+                        _logger.Info("{0} Search | Summary -> API returned invalid content (likely no subtitles found or API error).", Name);
+                        return Array.Empty<RemoteSubtitleInfo>();
+                    }
+
+                    var subtitleResponse = _jsonSerializer.DeserializeFromString<List<SubtitleResponseRoot>>(responseBody);
 
                     if (subtitleResponse != null)
                     {
@@ -141,21 +159,22 @@ namespace Emby.MeiamSub.Shooter
                             {
                                 remoteSubtitles.Add(new RemoteSubtitleInfo()
                                 {
-                                                                    Id = Base64Encode(_jsonSerializer.SerializeToString(new DownloadSubInfo
-                                                                    {
-                                                                        Url = subFile.Link,
-                                                                        Format = subFile.Ext,
+                                    Id = Base64Encode(_jsonSerializer.SerializeToString(new DownloadSubInfo
+                                    {
+                                        Url = subFile.Link,
+                                        Format = subFile.Ext,
+                                        Language = request.Language,
+                                        IsForced = request.IsForced
+                                    })),
+                                    Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {request.Language} | 射手",
                                     Language = request.Language,
-                                    IsForced = request.IsForced
-                                })),
-                                Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {request.Language} | 射手",
-                                Language = request.Language,
-                                Author = "Meiam ",
-                                ProviderName = $"{Name}",
-                                Format = subFile.Ext,
-                                Comment = $"Format : {ExtractFormat(subFile.Ext)}",
-                                IsHashMatch = true
-                            });                            }
+                                    Author = "Meiam ",
+                                    ProviderName = $"{Name}",
+                                    Format = subFile.Ext,
+                                    Comment = $"Format : {ExtractFormat(subFile.Ext)}",
+                                    IsHashMatch = true
+                                });
+                            }
                         }
                         _logger.Info("{0} Search | Summary -> Get  {1}  Subtitles", new object[2] { Name, remoteSubtitles.Count });
 
@@ -286,7 +305,7 @@ namespace Emby.MeiamSub.Shooter
             if (text.Contains(ASS)) return ASS;
             if (text.Contains(SSA)) return SSA;
             if (text.Contains(SRT)) return SRT;
-            
+
             return null;
         }
 

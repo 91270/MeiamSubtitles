@@ -132,21 +132,22 @@ namespace Emby.MeiamSub.Thunder
                             {
                                 remoteSubtitles.Add(new RemoteSubtitleInfo()
                                 {
-                                                                    Id = Base64Encode(_jsonSerializer.SerializeToString(new DownloadSubInfo
-                                                                    {
-                                                                        Url = item.Url,
-                                                                        Format = item.Ext,
-                                                                                                                                                Language = request.Language,
-                                                                                                                                                IsForced = request.IsForced
-                                                                                                                                            })),
-                                                                                                                                            Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
-                                                                                                                                            Language = request.Language,
-                                                                                                                                            Author = "Meiam ",
-                                                                                                                                            ProviderName = $"{Name}",
-                                                                                                                                            Format = item.Ext,
-                                                                                                                                            Comment = $"Format : {item.Ext}",
-                                                                                                                                            IsHashMatch = cid == item.Cid,
-                                                                                                                                        });                            }
+                                    Id = Base64Encode(_jsonSerializer.SerializeToString(new DownloadSubInfo
+                                    {
+                                        Url = item.Url,
+                                        Format = item.Ext,
+                                        Language = request.Language,
+                                        IsForced = request.IsForced
+                                    })),
+                                    Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
+                                    Language = request.Language,
+                                    Author = "Meiam ",
+                                    ProviderName = $"{Name}",
+                                    Format = item.Ext,
+                                    Comment = $"Format : {item.Ext}",
+                                    IsHashMatch = cid == item.Cid,
+                                });
+                            }
                         }
 
                         _logger.Info("{0} Search | Summary -> Get  {1}  Subtitles", new object[2] { Name, remoteSubtitles.Count });
@@ -177,7 +178,7 @@ namespace Emby.MeiamSub.Thunder
         /// <returns>包含字幕流的响应对象</returns>
         public async Task<SubtitleResponse> GetSubtitles(string id, CancellationToken cancellationToken)
         {
-            _logger.Info("{0} DownloadSub | Request -> {1}", new object[2] { Name, id });  
+            _logger.Info("{0} DownloadSub | Request -> {1}", new object[2] { Name, id });
 
             return await DownloadSubAsync(id);
         }
@@ -324,7 +325,7 @@ namespace Emby.MeiamSub.Thunder
             {
                 // 使用 BinaryReader 配合 BaseStream 需要小心，因为 BinaryReader 本身不支持异步 Read
                 // 这里我们直接操作 stream 进行异步读取，不再使用 BinaryReader，因为只是读取字节数组
-                
+
                 var fileSize = new FileInfo(filePath).Length;
                 using (var sha1 = SHA1.Create())
                 {
