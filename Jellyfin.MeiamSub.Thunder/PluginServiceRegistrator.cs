@@ -10,8 +10,19 @@ using System.Threading.Tasks;
 
 namespace Jellyfin.MeiamSub.Thunder
 {
+    /// <summary>
+    /// 插件服务注册器
+    /// 负责注册插件所需的依赖服务，如 HTTP 客户端和字幕提供程序。
+    /// <para>修改人: Meiam</para>
+    /// <para>修改时间: 2025-12-22</para>
+    /// </summary>
     public class PluginServiceRegistrator : IPluginServiceRegistrator
     {
+        /// <summary>
+        /// 注册服务
+        /// </summary>
+        /// <param name="serviceCollection">服务集合</param>
+        /// <param name="applicationHos">应用程序宿主</param>
         public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHos)
         {
             serviceCollection.AddHttpClient("MeiamSub.Thunder", client =>

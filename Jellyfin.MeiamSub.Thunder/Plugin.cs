@@ -8,6 +8,8 @@ namespace Jellyfin.MeiamSub.Thunder
 {
     /// <summary>
     /// 插件入口
+    /// <para>修改人: Meiam</para>
+    /// <para>修改时间: 2025-12-22</para>
     /// </summary>
     public class Plugin : BasePlugin<PluginConfiguration>
     {

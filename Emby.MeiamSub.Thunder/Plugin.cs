@@ -44,9 +44,12 @@ namespace Emby.MeiamSub.Thunder
         public static Plugin Instance { get; private set; }
 
         /// <summary>
-        /// 缩略图资源文件
+        /// 获取插件缩略图资源流
+        /// <para>修改人: Meiam</para>
+        /// <para>修改时间: 2025-12-22</para>
+        /// <para>备注: 增加了资源加载的安全性检查，防止因资源名不匹配导致的空引用。</para>
         /// </summary>
-        /// <returns></returns>
+        /// <returns>图片资源流，若不存在则返回 null</returns>
         public Stream GetThumbImage()
         {
             var type = GetType();
