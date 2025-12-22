@@ -86,11 +86,9 @@ namespace Emby.MeiamSub.Thunder
 
             try
             {
-                if (request.Language == "zh-CN" || request.Language == "zh-TW" || request.Language == "zh-HK")
-                {
-                    request.Language = "chi";
-                }
-                if (request.Language != "chi")
+                var language = NormalizeLanguage(request.Language);
+
+                if (language != "chi")
                 {
                     return Array.Empty<RemoteSubtitleInfo>();
                 }
@@ -109,7 +107,7 @@ namespace Emby.MeiamSub.Thunder
                 };
                 var response = await _httpClient.GetResponse(options);
 
-                _logger.Info("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(response) });
+                _logger.Debug("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(response) });
 
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
@@ -117,7 +115,7 @@ namespace Emby.MeiamSub.Thunder
 
                     if (subtitleResponse.Code == 0)
                     {
-                        _logger.Info("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(subtitleResponse) });
+                        _logger.Debug("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(subtitleResponse) });
 
                         var subtitles = subtitleResponse.Data.Where(m => !string.IsNullOrEmpty(m.Name));
 
@@ -133,7 +131,7 @@ namespace Emby.MeiamSub.Thunder
                                     {
                                         Url = item.Url,
                                         Format = item.Ext,
-                                        Language = request.Language,
+                                        Language = language,
                                         IsForced = request.IsForced
                                     })),
                                     Name = $"[MEIAMSUB] {item.Name} | {(item.Langs == string.Empty ? "未知" : item.Langs)} | 迅雷",
@@ -275,6 +273,29 @@ namespace Emby.MeiamSub.Thunder
             if (text.Contains(SRT)) return SRT;
 
             return null;
+        }
+
+        /// <summary>
+        /// 规范化语言代码
+        /// </summary>
+        /// <param name="language"></param>
+        /// <returns></returns>
+        private static string NormalizeLanguage(string language)
+        {
+            if (string.IsNullOrEmpty(language)) return language;
+
+            if (language.Equals("zh-CN", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("zh-TW", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("zh-HK", StringComparison.OrdinalIgnoreCase))
+            {
+                return "chi";
+            }
+            // 迅雷可能只支持 chi，这里为了保持逻辑一致，也可以处理 eng，虽然 SearchSubtitlesAsync 会过滤掉
+            if (language.Equals("en", StringComparison.OrdinalIgnoreCase))
+            {
+                return "eng";
+            }
+            return language;
         }
 
         /// <summary>

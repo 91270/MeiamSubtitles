@@ -84,15 +84,9 @@ namespace Emby.MeiamSub.Shooter
 
             try
             {
-                if (request.Language == "zh-CN" || request.Language == "zh-TW" || request.Language == "zh-HK")
-                {
-                    request.Language = "chi";
-                }
-                if (request.Language == "en")
-                {
-                    request.Language = "eng";
-                }
-                if (request.Language != "chi" && request.Language != "eng")
+                var language = NormalizeLanguage(request.Language);
+
+                if (language != "chi" && language != "eng")
                 {
                     return Array.Empty<RemoteSubtitleInfo>();
                 }
@@ -116,14 +110,14 @@ namespace Emby.MeiamSub.Shooter
                     { "filehash", HttpUtility.UrlEncode(hash)},
                     { "pathinfo", HttpUtility.UrlEncode(request.MediaPath)},
                     { "format", "json"},
-                    { "lang",request.Language ==  "chi" ? "chn" : "eng"}
+                    { "lang", language ==  "chi" ? "chn" : "eng"}
                 });
 
                 _logger.Info("{0} Search | Request -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(options) });
 
                 var response = await _httpClient.Post(options);
 
-                _logger.Info("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(response) });
+                _logger.Debug("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(response) });
 
                 if (response.StatusCode == HttpStatusCode.OK && response.ContentType.Contains("application/json"))
                 {
@@ -131,7 +125,7 @@ namespace Emby.MeiamSub.Shooter
 
                     if (subtitleResponse != null)
                     {
-                        _logger.Info("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(subtitleResponse) });
+                        _logger.Debug("{0} Search | Response -> {1}", new object[2] { Name, _jsonSerializer.SerializeToString(subtitleResponse) });
 
                         var remoteSubtitles = new List<RemoteSubtitleInfo>();
 
@@ -145,10 +139,10 @@ namespace Emby.MeiamSub.Shooter
                                     {
                                         Url = subFile.Link,
                                         Format = subFile.Ext,
-                                        Language = request.Language,
+                                        Language = language,
                                         IsForced = request.IsForced
                                     })),
-                                    Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {request.Language} | 射手",
+                                    Name = $"[MEIAMSUB] {Path.GetFileName(request.MediaPath)} | {language} | 射手",
                                     Author = "Meiam ",
                                     ProviderName = $"{Name}",
                                     Format = subFile.Ext,
@@ -288,6 +282,28 @@ namespace Emby.MeiamSub.Shooter
             if (text.Contains(SRT)) return SRT;
             
             return null;
+        }
+
+        /// <summary>
+        /// 规范化语言代码
+        /// </summary>
+        /// <param name="language"></param>
+        /// <returns></returns>
+        private static string NormalizeLanguage(string language)
+        {
+            if (string.IsNullOrEmpty(language)) return language;
+
+            if (language.Equals("zh-CN", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("zh-TW", StringComparison.OrdinalIgnoreCase) ||
+                language.Equals("zh-HK", StringComparison.OrdinalIgnoreCase))
+            {
+                return "chi";
+            }
+            if (language.Equals("en", StringComparison.OrdinalIgnoreCase))
+            {
+                return "eng";
+            }
+            return language;
         }
 
         /// <summary>
