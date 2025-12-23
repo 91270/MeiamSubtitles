@@ -15,6 +15,12 @@
     <PackageReference Include="Jellyfin.Controller" Version="10.11.5" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="thumb.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="Copy $(TargetDir)$(TargetFileName) $(SolutionDir)$(ConfigurationName)\$(TargetFileName) /y&#xD;&#xA;" />
   </Target>
