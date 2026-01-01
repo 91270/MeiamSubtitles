@@ -1,16 +1,20 @@
 using Emby.MeiamSub.Thunder.Model;
+using MediaBrowser.Common;
 using MediaBrowser.Common.Net;
+using MediaBrowser.Controller.Base;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Subtitles;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
+using MediaBrowser.Model.System;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -34,6 +38,9 @@ namespace Emby.MeiamSub.Thunder
         protected readonly ILogger _logger;
         private readonly IJsonSerializer _jsonSerializer;
         private readonly IHttpClient _httpClient;
+        private readonly IServiceRoot _serviceRoot;
+
+        private Plugin MainPlugin { get; set; }
 
         public int Order => 100;
 
@@ -46,11 +53,14 @@ namespace Emby.MeiamSub.Thunder
         #endregion
 
         #region 构造函数
-        public ThunderProvider(ILogManager logManager, IJsonSerializer jsonSerializer, IHttpClient httpClient)
+        public ThunderProvider(ILogManager logManager, IJsonSerializer jsonSerializer, IHttpClient httpClient, IApplicationHost applicationHost)
         {
             _logger = logManager.GetLogger(GetType().Name);
             _jsonSerializer = jsonSerializer;
             _httpClient = httpClient;
+            _serviceRoot = new ServiceRoot(applicationHost);
+            MainPlugin = _serviceRoot.GetService<IApplicationHost>().Plugins.OfType<Plugin>().FirstOrDefault();
+
             _logger.Info("{0} Init", new object[1] { Name });
         }
         #endregion
@@ -80,6 +90,30 @@ namespace Emby.MeiamSub.Thunder
         /// <returns></returns>
         private async Task<IEnumerable<RemoteSubtitleInfo>> SearchSubtitlesAsync(SubtitleSearchRequest request)
         {
+            // 修改人：Mayfly777w
+            // 修改时间：2026-01-01
+            // 备注：如果勾选采用元数据中的剧集名来作为字幕搜索匹配，则使用，否则默认用文件名
+            string MovieName;
+            if (MainPlugin.Options.EnableUseMetadata)
+            {
+                if (request.ContentType == VideoContentType.Episode)
+                {
+                    MovieName = $"{request.SeriesName} S{request.ParentIndexNumber}E{request.IndexNumber}";
+                }
+                else if (request.ContentType == VideoContentType.Movie)
+                {
+                    MovieName = request.Name;
+                }
+                else
+                {
+                    MovieName = Path.GetFileName(request.MediaPath);
+                }
+            }
+            else
+            {
+                MovieName = Path.GetFileName(request.MediaPath);
+            }
+
             // 修改人: Meiam
             // 修改时间: 2025-12-22
             // 备注: 增加异常处理
@@ -88,7 +122,7 @@ namespace Emby.MeiamSub.Thunder
             {
                 var language = NormalizeLanguage(request.Language);
 
-                _logger.Info("{0} Search | Target -> {1} | Language -> {2}", Name, Path.GetFileName(request.MediaPath), language);
+                _logger.Info("{0} Search | Target -> {1} | Language -> {2}", Name, MovieName, language);
 
                 if (language != "chi")
                 {
@@ -105,7 +139,7 @@ namespace Emby.MeiamSub.Thunder
 
                 HttpRequestOptions options = new HttpRequestOptions
                 {
-                    Url = $"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?name={Path.GetFileName(request.MediaPath)}",
+                    Url = $"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?name={MovieName}",
                     UserAgent = $"{Name}",
                     TimeoutMs = 30000,
                     AcceptHeader = "*/*",
