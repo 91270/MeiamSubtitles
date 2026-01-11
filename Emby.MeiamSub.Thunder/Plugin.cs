@@ -1,9 +1,13 @@
-﻿using MediaBrowser.Common;
+﻿﻿using Emby.Web.GenericEdit;
+using MediaBrowser.Common;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
+using MediaBrowser.Controller.Plugins;
 using MediaBrowser.Model.Drawing;
+using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 using System;
+using System.ComponentModel;
 using System.IO;
 
 namespace Emby.MeiamSub.Thunder
@@ -12,10 +16,10 @@ namespace Emby.MeiamSub.Thunder
     /// <summary>
     /// 插件入口
     /// </summary>
-    public class Plugin : BasePlugin, IHasThumbImage
+    public class Plugin : BasePluginSimpleUI<PluginConfiguration>, IHasThumbImage
     {
 
-        public Plugin(IApplicationPaths applicationPaths)
+        public Plugin(IApplicationPaths applicationPaths, IApplicationHost applicationHost) : base(applicationHost)
         {
             Instance = this;
         }
@@ -40,6 +44,10 @@ namespace Emby.MeiamSub.Thunder
         /// </summary>
         public ImageFormat ThumbImageFormat => ImageFormat.Gif;
 
+        /// <summary>
+        /// 获取插件选项
+        /// </summary>
+        public PluginConfiguration Options => this.GetOptions();
 
         public static Plugin Instance { get; private set; }
 
@@ -62,6 +70,23 @@ namespace Emby.MeiamSub.Thunder
             }
 
             return stream;
+        }
+    }
+
+    /// <summary>
+    /// 插件配置类
+    /// </summary>
+    public class PluginConfiguration : EditableOptionsBase
+    {
+        public override string EditorTitle => "MeiamSub Thunder Options";
+
+        [Description("勾选此项后，使用元数据中的剧集名称和季集编号搜索字幕")]
+        public bool EnableUseMetadata { get; set; }
+
+        public PluginConfiguration()
+        {
+            // 默认值
+            EnableUseMetadata = false;
         }
     }
 }
