@@ -82,9 +82,9 @@ namespace Jellyfin.MeiamSub.Thunder
         /// <returns></returns>
         private async Task<IEnumerable<RemoteSubtitleInfo>> SearchSubtitlesAsync(SubtitleSearchRequest request)
         {
-            // 修改人: Meiam
-            // 修改时间: 2025-12-22
-            // 备注: 增加极致探测日志
+            // 修改人: Meiam (移植自 PR #133 by Mayfly777w)
+            // 修改时间: 2026-02-11
+            // 备注: 增加元数据搜索选项，可以以元数据中的系列名和季集信息来作为匹配对象
 
             _logger.LogInformation("DEBUG: Entering SearchSubtitlesAsync (Thunder)");
 
@@ -97,14 +97,34 @@ namespace Jellyfin.MeiamSub.Thunder
                 }
 
                 var language = NormalizeLanguage(request.Language);
-                var fileName = string.Empty;
 
-                if (!string.IsNullOrEmpty(request.MediaPath))
+                // 根据配置决定搜索名称：使用元数据 或 文件名
+                string movieName;
+                if (Plugin.Instance?.Configuration?.EnableUseMetadata == true)
                 {
-                    fileName = Path.GetFileName(request.MediaPath);
+                    if (request.ContentType == VideoContentType.Episode)
+                    {
+                        movieName = $"{request.SeriesName} S{request.ParentIndexNumber}E{request.IndexNumber}";
+                    }
+                    else if (request.ContentType == VideoContentType.Movie)
+                    {
+                        movieName = request.Name;
+                    }
+                    else
+                    {
+                        movieName = !string.IsNullOrEmpty(request.MediaPath)
+                            ? Path.GetFileName(request.MediaPath)
+                            : string.Empty;
+                    }
+                }
+                else
+                {
+                    movieName = !string.IsNullOrEmpty(request.MediaPath)
+                        ? Path.GetFileName(request.MediaPath)
+                        : string.Empty;
                 }
 
-                _logger.LogInformation(Name + " Search | Target -> " + fileName + " | Language -> " + language);
+                _logger.LogInformation(Name + " Search | Target -> " + movieName + " | Language -> " + language);
 
                 if (language != "chi")
                 {
@@ -127,7 +147,7 @@ namespace Jellyfin.MeiamSub.Thunder
                 using var options = new HttpRequestMessage
                 {
                     Method = HttpMethod.Get,
-                    RequestUri = new Uri($"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?name={Path.GetFileName(request.MediaPath)}")
+                    RequestUri = new Uri($"https://api-shoulei-ssl.xunlei.com/oracle/subtitle?name={movieName}")
                 };
 
                 using var httpClient = _httpClientFactory.CreateClient(Name);

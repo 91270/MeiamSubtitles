@@ -1,17 +1,19 @@
 ﻿using Jellyfin.MeiamSub.Thunder.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
+using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 using System;
+using System.Collections.Generic;
 
 namespace Jellyfin.MeiamSub.Thunder
 {
     /// <summary>
     /// 插件入口
-    /// <para>修改人: Meiam</para>
-    /// <para>修改时间: 2025-12-22</para>
+    /// <para>修改人: Meiam (移植自 PR #133 by Mayfly777w)</para>
+    /// <para>修改时间: 2026-02-11</para>
     /// </summary>
-    public class Plugin : BasePlugin<PluginConfiguration>
+    public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     {
         /// <summary>
         /// 插件ID
@@ -36,5 +38,21 @@ namespace Jellyfin.MeiamSub.Thunder
         }
 
         public static Plugin Instance { get; private set; }
+
+        /// <summary>
+        /// 获取插件配置页面列表
+        /// </summary>
+        /// <returns>配置页面信息</returns>
+        public IEnumerable<PluginPageInfo> GetPages()
+        {
+            return new[]
+            {
+                new PluginPageInfo
+                {
+                    Name = Name,
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html"
+                }
+            };
+        }
     }
 }

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <title>MeiamSub.Thunder</title>
+</head>
+<body>
+    <div id="MeiamSubThunderConfigPage" data-role="page" class="page type-interior pluginConfigurationPage"
+        data-require="emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="MeiamSubThunderConfigForm">
+                    <div class="verticalSection">
+                        <h2 class="sectionTitle">迅雷字幕搜索设置</h2>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="EnableUseMetadata" name="EnableUseMetadata" type="checkbox"
+                                    is="emby-checkbox" />
+                                <span>使用元数据搜索字幕</span>
+                            </label>
+                            <div class="fieldDescription">
+                                勾选此项后，使用元数据中的剧集名称和季集编号搜索字幕，而非文件名。
+                                <br />
+                                剧集将使用 "剧集名 S01E01" 格式；电影将使用影片名称。
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                            <span>保存</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+            var MeiamSubThunderConfig = {
+                pluginUniqueId: 'E4CE9DA9-EF00-417C-96F2-861C512D45EB'
+            };
+
+            document.querySelector('#MeiamSubThunderConfigPage')
+                .addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(MeiamSubThunderConfig.pluginUniqueId).then(function (config) {
+                        document.querySelector('#EnableUseMetadata').checked = config.EnableUseMetadata;
+                        Dashboard.hideLoadingMsg();
+                    });
+                });
+
+            document.querySelector('#MeiamSubThunderConfigForm')
+                .addEventListener('submit', function (e) {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(MeiamSubThunderConfig.pluginUniqueId).then(function (config) {
+                        config.EnableUseMetadata = document.querySelector('#EnableUseMetadata').checked;
+                        ApiClient.updatePluginConfiguration(MeiamSubThunderConfig.pluginUniqueId, config).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
+                    });
+                    e.preventDefault();
+                    return false;
+                });
+        </script>
+    </div>
+</body>
+</html>

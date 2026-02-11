@@ -365,7 +365,6 @@ FodyWeavers.xsd
 TestServer/
 
 .agent/
-.docs/
 
 GEMINI.md
 
