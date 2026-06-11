@@ -1,4 +1,4 @@
-﻿using Jellyfin.MeiamSub.Shooter.Model;
+using Jellyfin.MeiamSub.Shooter.Model;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
@@ -118,6 +118,15 @@ namespace Jellyfin.MeiamSub.Shooter
                 if (string.IsNullOrEmpty(request.MediaPath))
                 {
                     _logger.LogInformation(Name + " Search | Summary -> MediaPath is empty, skip search.");
+                    return Array.Empty<RemoteSubtitleInfo>();
+                }
+
+                if (request.MediaPath.Contains("://") ||
+                    request.MediaPath.StartsWith("smb://", StringComparison.OrdinalIgnoreCase) ||
+                    request.MediaPath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                    request.MediaPath.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning(Name + " Search | Network path detected, skip hash-based Shooter search: {Path}", request.MediaPath);
                     return Array.Empty<RemoteSubtitleInfo>();
                 }
 

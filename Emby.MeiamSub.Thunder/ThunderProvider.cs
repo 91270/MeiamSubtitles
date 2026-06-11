@@ -352,8 +352,17 @@ namespace Emby.MeiamSub.Thunder
         private async Task<string> GetCidByFileAsync(string filePath)
         {
             // 修改人: Meiam
-            // 修改时间: 2025-12-22
-            // 备注: 改造为异步方法，优化 I/O 性能，使用 SHA1.Create() 替代旧 API，并增加 using 语句释放资源
+            // 修改时间: 2026-06-11
+            // 备注: 增加网络路径拦截，避免 FileStream 打开非本地路径抛出异常
+            if (string.IsNullOrEmpty(filePath) ||
+                filePath.Contains("://") ||
+                filePath.StartsWith("smb://", StringComparison.OrdinalIgnoreCase) ||
+                filePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                filePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.Warn("Network path detected, skip hash calculation: {0}", filePath);
+                return string.Empty;
+            }
 
             using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
             {

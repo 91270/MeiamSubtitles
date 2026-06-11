@@ -1,4 +1,4 @@
-﻿using Emby.MeiamSub.Shooter.Model;
+using Emby.MeiamSub.Shooter.Model;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Subtitles;
@@ -92,6 +92,16 @@ namespace Emby.MeiamSub.Shooter
                 if (language != "chi" && language != "eng")
                 {
                     _logger.Info("{0} Search | Summary -> Language not supported, skip search.", Name);
+                    return Array.Empty<RemoteSubtitleInfo>();
+                }
+
+                if (string.IsNullOrEmpty(request.MediaPath) ||
+                    request.MediaPath.Contains("://") ||
+                    request.MediaPath.StartsWith("smb://", StringComparison.OrdinalIgnoreCase) ||
+                    request.MediaPath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                    request.MediaPath.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.Warn("{0} Search | Network path detected, skip hash-based search: {1}", Name, request.MediaPath);
                     return Array.Empty<RemoteSubtitleInfo>();
                 }
 
