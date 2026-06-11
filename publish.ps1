@@ -9,6 +9,9 @@ param (
     [string]$EmbyVersion,
     
     [Parameter(Mandatory=$false)]
+    [string]$Notes,
+    
+    [Parameter(Mandatory=$false)]
     [switch]$PublishToGitHub
 )
 
@@ -133,7 +136,17 @@ if ($PublishToGitHub) {
     git push origin master
     
     Write-Host "Creating GitHub Release v$Version and uploading assets..." -ForegroundColor Yellow
-    gh release create "v$Version" $EmbyZip $JellyfinZip --title "v$Version" --generate-notes
+    if ($Notes) {
+        $AutoNotes = gh release generate-notes --tag "v$Version"
+        $NotesContent = "## Release Notes`n`n$Notes`n`n" + $AutoNotes
+        $NotesFile = "Release\temp_notes.md"
+        Set-Content -Path $NotesFile -Value $NotesContent
+        
+        gh release create "v$Version" $EmbyZip $JellyfinZip --title "v$Version" --notes-file $NotesFile
+        if (Test-Path $NotesFile) { Remove-Item -Force $NotesFile }
+    } else {
+        gh release create "v$Version" $EmbyZip $JellyfinZip --title "v$Version" --generate-notes
+    }
     
     Write-Host "=== GitHub Release finished successfully! ===" -ForegroundColor Green
 }
