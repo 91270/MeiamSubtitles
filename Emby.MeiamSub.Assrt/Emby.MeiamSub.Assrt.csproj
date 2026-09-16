@@ -8,8 +8,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <!-- Emby 4.9 provides SharpCompress 0.33.0 at runtime. Upgrading the compile-time
-         reference would make the plugin request an assembly version the host does not provide. -->
+    <!-- 已验证 Emby 4.8.10.0、4.9.5.0 和 4.10.0.40 均提供 SharpCompress 0.33.0。
+         保持与宿主程序集版本一致，避免插件加载或解压失败。 -->
     <NoWarn>$(NoWarn);NU1902</NoWarn>
   </PropertyGroup>
 
@@ -26,8 +26,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MediaBrowser.Common" Version="4.9.1.90" />
-    <PackageReference Include="MediaBrowser.Server.Core" Version="4.9.1.90" />
+    <!-- 使用旧版宿主可解析的 SDK，避免插件要求 4.9.1.90 程序集。 -->
+    <PackageReference Include="MediaBrowser.Common" Version="4.8.10" />
+    <PackageReference Include="MediaBrowser.Server.Core" Version="4.8.10" />
     <PackageReference Include="SharpCompress" Version="0.33.0" ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
 

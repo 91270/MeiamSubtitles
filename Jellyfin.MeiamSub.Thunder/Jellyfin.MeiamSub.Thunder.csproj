@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Version>1.0.16.0</Version>
     <AssemblyVersion>1.0.16.0</AssemblyVersion>
   </PropertyGroup>
@@ -12,7 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Jellyfin.Controller" Version="10.11.11" />
+    <!-- 使用已验证的最低兼容基线，保持同一 DLL 可运行于 Jellyfin 10.10.7、10.11.11 和 12.1。 -->
+    <PackageReference Include="Jellyfin.Controller" Version="10.10.7" />
   </ItemGroup>
 
   <ItemGroup>

@@ -41,10 +41,15 @@
 
 | 插件 | 平台 | 目标框架 | 字幕源 |
 | --- | --- | --- | --- |
-| `Emby.MeiamSub.Assrt` | Emby 4.9+ | .NET Standard 2.1 | [Assrt.net](https://assrt.net/) |
-| `Emby.MeiamSub.Thunder` | Emby 4.9+ | .NET Standard 2.1 | Thunder XMP |
-| `Jellyfin.MeiamSub.Assrt` | Jellyfin 10.11+ | .NET 9.0 | [Assrt.net](https://assrt.net/) |
-| `Jellyfin.MeiamSub.Thunder` | Jellyfin 10.11+ | .NET 9.0 | Thunder XMP |
+| `Emby.MeiamSub.Assrt` | Emby（版本限制见下文） | .NET Standard 2.1 | [Assrt.net](https://assrt.net/) |
+| `Emby.MeiamSub.Thunder` | Emby（版本限制见下文） | .NET Standard 2.1 | Thunder XMP |
+| `Jellyfin.MeiamSub.Assrt` | Jellyfin（版本限制见下文） | .NET 8.0 | [Assrt.net](https://assrt.net/) |
+| `Jellyfin.MeiamSub.Thunder` | Jellyfin（版本限制见下文） | .NET 8.0 | Thunder XMP |
+
+| 平台 | 兼容版本 |
+| --- | --- |
+| Emby | 4.8.10.0 至 4.10.0.40 |
+| Jellyfin | 10.10.7 至 12.1 |
 
 ## 安装
 

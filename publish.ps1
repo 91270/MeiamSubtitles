@@ -16,6 +16,8 @@ param (
 )
 
 $ErrorActionPreference = "Stop"
+$SupportedEmbySdkVersion = "4.8.10"
+$SupportedJellyfinSdkVersion = "10.10.7"
 
 Write-Host "=== Start Release Process, Target Version: $Version ===" -ForegroundColor Cyan
 
@@ -32,10 +34,18 @@ $EmbyThunderCsproj = "Emby.MeiamSub.Thunder\Emby.MeiamSub.Thunder.csproj"
 $EmbyAssrtCsproj = "Emby.MeiamSub.Assrt\Emby.MeiamSub.Assrt.csproj"
 
 # Update NuGet package version if specified
+if ($JellyfinVersion -and $JellyfinVersion -ne $SupportedJellyfinSdkVersion) {
+    throw "Jellyfin SDK must remain at $SupportedJellyfinSdkVersion for the verified 10.10.7-12.1 compatibility range. Update the compatibility matrix before changing it."
+}
+
 if ($JellyfinVersion) {
     Write-Host "Upgrading Jellyfin.Controller NuGet dependency to $JellyfinVersion..." -ForegroundColor Yellow
     (Get-Content $ThunderCsproj) -replace '<PackageReference Include="Jellyfin.Controller" Version="[^"]+" />', "<PackageReference Include=`"Jellyfin.Controller`" Version=`"$JellyfinVersion`" />" | Set-Content $ThunderCsproj
     (Get-Content $AssrtCsproj) -replace '<PackageReference Include="Jellyfin.Controller" Version="[^"]+" />', "<PackageReference Include=`"Jellyfin.Controller`" Version=`"$JellyfinVersion`" />" | Set-Content $AssrtCsproj
+}
+
+if ($EmbyVersion -and $EmbyVersion -ne $SupportedEmbySdkVersion) {
+    throw "Emby SDK must remain at $SupportedEmbySdkVersion for the verified 4.8.10.0-4.10.0.40 compatibility range. Update the compatibility matrix before changing it."
 }
 
 if ($EmbyVersion) {
