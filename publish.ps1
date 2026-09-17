@@ -49,11 +49,11 @@ if ($Channel -eq "Stable" -and $Revision -ne 0) {
 }
 
 if ($Channel -eq "Preview" -and $Revision -eq 0) {
-    throw "预发布版版本号末位必须大于 0，例如 1.0.17.1。"
+    throw "测试版版本号末位必须大于 0，例如 1.0.17.1。"
 }
 
 if ($Channel -eq "Preview" -and $PublishToGitHub -and [string]::IsNullOrWhiteSpace($Notes)) {
-    throw "发布滚动预发布版时必须通过 -Notes 说明本轮测试重点。"
+    throw "发布滚动测试版时必须通过 -Notes 说明本轮测试重点。"
 }
 
 $CurrentVersionMatch = [regex]::Match((Get-Content -LiteralPath $ThunderCsproj -Raw), '<Version>([\d\.]+)</Version>')
@@ -94,7 +94,7 @@ if ($Channel -eq "Stable") {
     }
 }
 
-$ChannelLabel = if ($Channel -eq "Preview") { "预发布" } else { "正式发布" }
+$ChannelLabel = if ($Channel -eq "Preview") { "测试版发布" } else { "正式发布" }
 Write-Host "=== 开始${ChannelLabel}流程，目标版本：$Version ===" -ForegroundColor Cyan
 
 if ($ValidateOnly) {
@@ -247,7 +247,7 @@ if ($PublishToGitHub) {
     }
 
     $CommitMessage = if ($Channel -eq "Preview") {
-        "发布: 更新滚动预发布版至 v$Version"
+        "发布: 更新滚动测试版至 v$Version"
     } else {
         "发布: v$Version"
     }
@@ -263,7 +263,7 @@ if ($PublishToGitHub) {
     }
     
     if ($Channel -eq "Preview") {
-        Write-Host "Updating rolling GitHub preview release..." -ForegroundColor Yellow
+        Write-Host "Updating rolling GitHub test release..." -ForegroundColor Yellow
         $CommitSha = git @GitArguments rev-parse HEAD
         if ($LASTEXITCODE -ne 0) {
             throw "无法读取预发布提交哈希。"
@@ -308,15 +308,15 @@ $Notes
             if ($PreviewReleaseExists) {
                 & gh release upload $PreviewTag $EmbyZip $JellyfinZip --clobber
                 if ($LASTEXITCODE -ne 0) {
-                    throw "覆盖滚动预发布附件失败；请检查仓库是否启用了 Release 不可变保护。"
+                    throw "覆盖滚动测试附件失败；请检查仓库是否启用了 Release 不可变保护。"
                 }
-                & gh release edit $PreviewTag --title "预发布版" --notes-file $PreviewNotesFile --prerelease --draft=false --latest=false
+                & gh release edit $PreviewTag --title "测试版（滚动更新）" --notes-file $PreviewNotesFile --prerelease --draft=false --latest=false
             } else {
-                & gh release create $PreviewTag $EmbyZip $JellyfinZip --title "预发布版" --verify-tag --notes-file $PreviewNotesFile --prerelease --latest=false
+                & gh release create $PreviewTag $EmbyZip $JellyfinZip --title "测试版（滚动更新）" --verify-tag --notes-file $PreviewNotesFile --prerelease --latest=false
             }
 
             if ($LASTEXITCODE -ne 0) {
-                throw "创建或更新滚动预发布 Release 失败。"
+                throw "创建或更新滚动测试 Release 失败。"
             }
         } finally {
             if (Test-Path -LiteralPath $PreviewNotesFile) {
@@ -324,7 +324,7 @@ $Notes
             }
         }
 
-        Write-Host "滚动预发布已更新：不要修改 manifest-stable.json。" -ForegroundColor Yellow
+        Write-Host "滚动测试版已更新：不要修改 manifest-stable.json。" -ForegroundColor Yellow
     } else {
         Write-Host "Creating stable GitHub Release v$Version and uploading assets..." -ForegroundColor Yellow
         $ReleaseArguments = @(
@@ -349,7 +349,7 @@ $Notes
         if ($LASTEXITCODE -eq 0) {
             & gh release edit $PreviewTag --draft
             if ($LASTEXITCODE -ne 0) {
-                throw "正式版已创建，但隐藏滚动预发布 Release 失败。"
+                throw "正式版已创建，但隐藏滚动测试 Release 失败。"
             }
         }
 
