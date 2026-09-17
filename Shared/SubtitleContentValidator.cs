@@ -7,7 +7,27 @@ namespace MeiamSubtitles.Shared
 {
     internal static class SubtitleContentValidator
     {
+        private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, true);
+        private static readonly Encoding StrictUtf16Le = new UnicodeEncoding(false, true, true);
+        private static readonly Encoding StrictUtf16Be = new UnicodeEncoding(true, true, true);
+
+        static SubtitleContentValidator()
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        }
+
         public static void Validate(byte[] data, string format, string mediaType)
+        {
+            DecodeAndValidate(data, format, mediaType);
+        }
+
+        public static byte[] ValidateAndConvertToUtf8(byte[] data, string format, string mediaType)
+        {
+            var text = DecodeAndValidate(data, format, mediaType);
+            return Encoding.UTF8.GetBytes(text);
+        }
+
+        private static string DecodeAndValidate(byte[] data, string format, string mediaType)
         {
             if (data == null || data.Length < 8)
             {
@@ -38,7 +58,7 @@ namespace MeiamSubtitles.Shared
 
                 if (IsValidSubtitle(sample, format))
                 {
-                    return;
+                    return sample;
                 }
 
                 if (sample.StartsWith("[", StringComparison.Ordinal))
@@ -65,35 +85,52 @@ namespace MeiamSubtitles.Shared
 
         private static IEnumerable<string> DecodeSamples(byte[] data)
         {
-            var length = Math.Min(data.Length, 4096);
+            // Decode the complete subtitle because the selected text is returned to
+            // the host after validation and must not be truncated to a probe window.
+            var length = data.Length;
 
             if (data.Length >= 2)
             {
                 if (data[0] == 0xFF && data[1] == 0xFE)
                 {
-                    yield return DecodeSample(data, length, Encoding.Unicode);
+                    yield return DecodeSample(data, length, StrictUtf16Le);
                     yield break;
                 }
 
                 if (data[0] == 0xFE && data[1] == 0xFF)
                 {
-                    yield return DecodeSample(data, length, Encoding.BigEndianUnicode);
+                    yield return DecodeSample(data, length, StrictUtf16Be);
                     yield break;
                 }
             }
 
             if (data.Length >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF)
             {
-                yield return DecodeSample(data, length, Encoding.UTF8);
+                yield return DecodeSample(data, length, StrictUtf8);
                 yield break;
             }
 
-            // Thunder may return UTF-16 subtitles without a BOM. Try the common
-            // single-byte/UTF-8 representation and both UTF-16 byte orders, then
-            // accept only a candidate that contains the expected subtitle syntax.
-            yield return DecodeSample(data, length, new UTF8Encoding(false, false));
-            yield return DecodeSample(data, length, Encoding.Unicode);
-            yield return DecodeSample(data, length, Encoding.BigEndianUnicode);
+            // Thunder may return UTF-16 or GB18030 subtitles without a BOM. Decode
+            // strictly so invalid UTF-8 cannot hide the actual legacy encoding.
+            foreach (var encoding in new[] { StrictUtf8, StrictUtf16Le, StrictUtf16Be, GetGb18030Encoding() })
+            {
+                string sample;
+                try
+                {
+                    sample = DecodeSample(data, length, encoding);
+                }
+                catch (DecoderFallbackException)
+                {
+                    continue;
+                }
+
+                yield return sample;
+            }
+        }
+
+        private static Encoding GetGb18030Encoding()
+        {
+            return Encoding.GetEncoding(54936, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
         }
 
         private static string DecodeSample(byte[] data, int length, Encoding encoding)

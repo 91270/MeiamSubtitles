@@ -286,14 +286,14 @@ namespace Emby.MeiamSub.Thunder
                     await response.Content.CopyToAsync(stream, 81920, cancellationToken);
                     var data = stream.ToArray();
                     stream.Dispose();
-                    SubtitleContentValidator.Validate(data, format, response.ContentType);
+                    var utf8Data = SubtitleContentValidator.ValidateAndConvertToUtf8(data, format, response.ContentType);
 
                     return new SubtitleResponse()
                     {
                         Language = downloadSub.Language,
                         IsForced = downloadSub.IsForced ?? false,
                         Format = format,
-                        Stream = new MemoryStream(data, writable: false),
+                        Stream = new MemoryStream(utf8Data, writable: false),
                     };
                 }
             }

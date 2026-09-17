@@ -27,6 +27,7 @@
     <!-- 使用旧版宿主可解析的 SDK，避免插件要求 4.9.1.90 程序集。 -->
     <PackageReference Include="MediaBrowser.Common" Version="4.8.10" />
     <PackageReference Include="MediaBrowser.Server.Core" Version="4.8.10" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
   </ItemGroup>
 
   

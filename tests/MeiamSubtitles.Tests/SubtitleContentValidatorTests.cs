@@ -32,6 +32,67 @@ public class SubtitleContentValidatorTests
         SubtitleContentValidator.Validate(data, "srt", "application/octet-stream");
     }
 
+    [Fact]
+    public void ConvertsGb18030SrtToUtf8ForPreview()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var content = "1\r\n00:00:01,000 --> 00:00:02,000\r\n中文字幕\r\n";
+        var data = Encoding.GetEncoding(54936).GetBytes(content);
+
+        var normalized = SubtitleContentValidator.ValidateAndConvertToUtf8(
+            data,
+            "srt",
+            "application/octet-stream");
+
+        Assert.Equal(content, Encoding.UTF8.GetString(normalized));
+    }
+
+    [Fact]
+    public void PreservesCompleteUtf8SubtitleWhenNormalizing()
+    {
+        var content = "1\r\n00:00:01,000 --> 00:00:20,000\r\n" + new string('中', 3000) + "\r\n";
+
+        var normalized = SubtitleContentValidator.ValidateAndConvertToUtf8(
+            Encoding.UTF8.GetBytes(content),
+            "srt",
+            "application/octet-stream");
+
+        Assert.Equal(content, Encoding.UTF8.GetString(normalized));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ConvertsUtf16SrtToUtf8ForPreview(bool bigEndian)
+    {
+        var encoding = new UnicodeEncoding(bigEndian, true);
+        var content = "1\r\n00:00:01,000 --> 00:00:02,000\r\n中文字幕\r\n";
+        var data = encoding.GetPreamble().Concat(encoding.GetBytes(content)).ToArray();
+
+        var normalized = SubtitleContentValidator.ValidateAndConvertToUtf8(
+            data,
+            "srt",
+            "application/octet-stream");
+
+        Assert.Equal(content, Encoding.UTF8.GetString(normalized));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ConvertsUtf16WithoutBomToUtf8ForPreview(bool bigEndian)
+    {
+        var encoding = new UnicodeEncoding(bigEndian, false);
+        var content = "1\r\n00:00:01,000 --> 00:00:02,000\r\n中文字幕\r\n";
+
+        var normalized = SubtitleContentValidator.ValidateAndConvertToUtf8(
+            encoding.GetBytes(content),
+            "srt",
+            "application/octet-stream");
+
+        Assert.Equal(content, Encoding.UTF8.GetString(normalized));
+    }
+
     [Theory]
     [InlineData(false, false)]
     [InlineData(false, true)]

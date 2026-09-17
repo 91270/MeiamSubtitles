@@ -14,6 +14,7 @@
   <ItemGroup>
     <!-- 使用已验证的最低兼容基线，保持同一 DLL 可运行于 Jellyfin 10.10.7、10.11.11 和 12.1。 -->
     <PackageReference Include="Jellyfin.Controller" Version="10.10.7" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>

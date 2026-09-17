@@ -283,8 +283,11 @@ namespace Jellyfin.MeiamSub.Thunder
                     var format = NormalizeFormat(downloadSub.Format)
                         ?? throw new InvalidDataException($"Unsupported subtitle format: {downloadSub.Format}");
                     var data = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-                    SubtitleContentValidator.Validate(data, format, response.Content.Headers.ContentType?.MediaType);
-                    var stream = new MemoryStream(data, writable: false);
+                    var utf8Data = SubtitleContentValidator.ValidateAndConvertToUtf8(
+                        data,
+                        format,
+                        response.Content.Headers.ContentType?.MediaType);
+                    var stream = new MemoryStream(utf8Data, writable: false);
 
                     return new SubtitleResponse()
                     {
