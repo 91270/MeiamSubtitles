@@ -135,8 +135,25 @@ namespace MeiamSubtitles.Shared
 
         private static string DecodeSample(byte[] data, int length, Encoding encoding)
         {
-            return encoding.GetString(data, 0, length)
-                .TrimStart('\uFEFF', ' ', '\r', '\n', '\t');
+            try
+            {
+                return encoding.GetString(data, 0, length)
+                    .TrimStart('\uFEFF', ' ', '\r', '\n', '\t');
+            }
+            catch (DecoderFallbackException) when (IsUtf16(encoding) && (length & 1) == 1)
+            {
+                // A UTF-16 payload with an odd byte count ends with a byte that
+                // cannot form a complete code unit. Thunder appends such a stray
+                // byte to some subtitles, so decode the payload without it.
+                return encoding.GetString(data, 0, length - 1)
+                    .TrimStart('\uFEFF', ' ', '\r', '\n', '\t');
+            }
+        }
+
+        private static bool IsUtf16(Encoding encoding)
+        {
+            var codePage = encoding.CodePage;
+            return codePage == 1200 || codePage == 1201;
         }
     }
 }

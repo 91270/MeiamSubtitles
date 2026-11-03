@@ -132,6 +132,52 @@ public class SubtitleContentValidatorTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AcceptsUtf16SubtitleWithTrailingStrayByte(bool bigEndian)
+    {
+        // 迅雷部分字幕在 UTF-16 正文之后多出一个孤立字节（实测为 0x0A），
+        // 导致总长度为奇数，严格解码会在该半个字符处抛 DecoderFallbackException。
+        var encoding = new UnicodeEncoding(bigEndian, true);
+        var content = "1\r\n00:00:01,000 --> 00:00:02,000\r\n你好\r\n";
+        var body = encoding.GetBytes(content);
+        var data = encoding.GetPreamble().Concat(body).Concat(new byte[] { 0x0A }).ToArray();
+
+        SubtitleContentValidator.Validate(data, "srt", "application/octet-stream");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ConvertsUtf16SubtitleWithTrailingStrayByteToUtf8(bool bigEndian)
+    {
+        var encoding = new UnicodeEncoding(bigEndian, true);
+        var content = "1\r\n00:00:01,000 --> 00:00:02,000\r\n中文字幕\r\n";
+        var body = encoding.GetBytes(content);
+        var data = encoding.GetPreamble().Concat(body).Concat(new byte[] { 0x0A }).ToArray();
+
+        var normalized = SubtitleContentValidator.ValidateAndConvertToUtf8(
+            data,
+            "srt",
+            "application/octet-stream");
+
+        Assert.Equal(content, Encoding.UTF8.GetString(normalized));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AcceptsUtf16AssWithTrailingStrayByte(bool bigEndian)
+    {
+        var encoding = new UnicodeEncoding(bigEndian, true);
+        var content = "[Script Info]\r\nScriptType: v4.00+\r\n[Events]\r\nDialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello";
+        var body = encoding.GetBytes(content);
+        var data = encoding.GetPreamble().Concat(body).Concat(new byte[] { 0x0A }).ToArray();
+
+        SubtitleContentValidator.Validate(data, "ass", "application/octet-stream");
+    }
+
+    [Theory]
     [InlineData("<html><!-- service unavailable --><body>Error</body></html>", "srt")]
     [InlineData("{\"error\":\"download --> failed\"}", "srt")]
     [InlineData("<html><body>Dialogue: download failed</body></html>", "ass")]
